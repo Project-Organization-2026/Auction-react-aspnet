@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="Auction.API/Auction.API.csproj" />
+  <Project Path="Auction.BLL/Auction.BLL.csproj" />
+  <Project Path="Auction.DAL/Auction.DAL.csproj" />
+</Solution>
