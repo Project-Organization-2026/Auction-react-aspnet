@@ -1,15 +1,25 @@
+using Auction.BLL.Initializer;
+using Auction.BLL.Services;
 using Auction.DAL.Data;
+using Auction.DAL.Repositories.Interfaces;
+using Auction.DAL.Repositories.Realizations;
 using Microsoft.EntityFrameworkCore;
 
 DotNetEnv.Env.Load();
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddScoped<IRepositoryWrapper, RepositoryWrapper>();
+builder.Services.AddScoped<LotsService>();
+
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 builder.Logging.AddDebug();
 
 // Add services to the container.
 builder.Services.AddControllers();
+builder.Services.AddAutoMapper(cfg => { }, AppDomain.CurrentDomain.GetAssemblies());
+builder.Services.AddSwaggerGen(cfg => { });
 builder.Services.AddDbContext<AuctionDbContext>(options =>
 {
     string? connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
@@ -21,16 +31,17 @@ builder.Services.AddDbContext<AuctionDbContext>(options =>
 
     options.UseNpgsql(connectionString);
 });
-        
 
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
 
 app.UseAuthorization();
 app.MapControllers();
+await app.SeedAsync();
 app.Run();

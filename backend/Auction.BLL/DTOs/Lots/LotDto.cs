@@ -1,8 +1,11 @@
+﻿using Auction.BLL.DTOs.Categories;
+using Auction.BLL.DTOs.Users;
+using Auction.DAL.Entities;
 using Auction.DAL.Enums;
 
-namespace Auction.DAL.Entities;
+namespace Auction.BLL.DTOs.Lots;
 
-public class Lot
+public class LotDto
 {
     public int Id { get; set; }
     public string Title { get; set; } = null!;
@@ -15,15 +18,7 @@ public class Lot
     public LotStatus Status { get; set; } = LotStatus.Draft;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-    // Foreign keys
-    public int SellerId { get; set; }
-    public int? WinnerId { get; set; }
-    public int CategoryId { get; set; }
-
-    // Navigation properties
-    public User Seller { get; set; } = null!;
-    public User? Winner { get; set; }
-    public Category Category { get; set; } = null!;
-    public ICollection<LotImage> Images { get; set; } = new List<LotImage>();
-    public ICollection<Bid> Bids { get; set; } = new List<Bid>();
+    public UserSummaryDto Seller { get; set; } = null!;
+    public UserSummaryDto? Winner { get; set; }
+    public CategoryDto Category { get; set; } = null!;
 }
