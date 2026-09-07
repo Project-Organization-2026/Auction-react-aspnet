@@ -9,7 +9,7 @@ public static class DevelopmentDataSeeder
 {
     public static async Task SeedAsync(AuctionDbContext context)
     {
-        if (CheckIfDataExists(context))
+        if (await CheckIfDataExists(context))
         {
             return;
         }
@@ -20,8 +20,8 @@ public static class DevelopmentDataSeeder
         await SeedLotsAsync(context);
     }
 
-    public static bool CheckIfDataExists(AuctionDbContext context)
-        => context.Users.Any() || context.Categories.Any() || context.Lots.Any();
+    public static async Task<bool> CheckIfDataExists(AuctionDbContext context)
+        => await context.Users.AnyAsync() || await context.Categories.AnyAsync() || await context.Lots.AnyAsync();
 
     public static async Task SeedUsersAsync(AuctionDbContext context)
     {

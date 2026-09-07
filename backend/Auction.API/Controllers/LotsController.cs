@@ -1,7 +1,6 @@
 ﻿using Auction.BLL.DTOs.Lots;
 using Auction.BLL.Services;
 using Microsoft.AspNetCore.Mvc;
-using Superpower.Model;
 
 namespace Auction.API.Controllers
 {
@@ -77,7 +76,7 @@ namespace Auction.API.Controllers
             }
             catch (ArgumentException ex)
             {
-                return BadRequest(ex.Message);
+                return NotFound(ex.Message);
             }
             catch (InvalidOperationException ex)
             {
