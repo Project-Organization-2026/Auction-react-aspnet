@@ -49,6 +49,17 @@ public class RepositoryBase<T> : IRepositoryBase<T>
         return await query.FirstOrDefaultAsync();
     }
 
+    public async Task<bool> AnyAsync(QueryOptions<T>? options = null)
+    {
+        IQueryable<T> query = _context.Set<T>();
+        if (options != null)
+        {
+            query = ApplyQueryOptions(query, options);
+        }
+
+        return await query.AnyAsync();
+    }
+
     public void Update(T entity)
     {
         _context.Set<T>().Update(entity);

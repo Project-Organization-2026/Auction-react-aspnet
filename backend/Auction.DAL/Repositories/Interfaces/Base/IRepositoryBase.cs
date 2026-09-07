@@ -7,6 +7,7 @@ public interface IRepositoryBase<T>
 {
     Task<T?> GetFirstOrDefaultAsync(QueryOptions<T>? options = null);
     Task<IEnumerable<T>> GetAllAsync(QueryOptions<T>? options = null);
+    Task<bool> AnyAsync(QueryOptions<T>? options = null);
     Task<T> CreateAsync(T entity);
     void Update(T entity);
     void Delete(T entity);
