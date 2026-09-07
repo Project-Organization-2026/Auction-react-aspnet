@@ -18,12 +18,12 @@ public class Lot
     // Foreign keys
     public int SellerId { get; set; }
     public int? WinnerId { get; set; }
-    public int CategoryId { get; set; }
+    public int? CategoryId { get; set; }
 
     // Navigation properties
     public User Seller { get; set; } = null!;
     public User? Winner { get; set; }
-    public Category Category { get; set; } = null!;
+    public Category? Category { get; set; }
     public ICollection<LotImage> Images { get; set; } = new List<LotImage>();
     public ICollection<Bid> Bids { get; set; } = new List<Bid>();
 }

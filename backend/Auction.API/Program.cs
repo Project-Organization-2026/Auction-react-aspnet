@@ -1,6 +1,6 @@
-using Auction.BLL.Initializer;
 using Auction.BLL.Services;
 using Auction.DAL.Data;
+using Auction.DAL.Extensions;
 using Auction.DAL.Repositories.Interfaces;
 using Auction.DAL.Repositories.Realizations;
 using Microsoft.EntityFrameworkCore;
@@ -34,6 +34,8 @@ builder.Services.AddDbContext<AuctionDbContext>(options =>
 
 var app = builder.Build();
 
+await app.SeedDatabaseAsync();
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
@@ -43,5 +45,4 @@ if (app.Environment.IsDevelopment())
 
 app.UseAuthorization();
 app.MapControllers();
-await app.SeedAsync();
 app.Run();

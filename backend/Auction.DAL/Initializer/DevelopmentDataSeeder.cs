@@ -1,38 +1,17 @@
-﻿using Auction.BLL.DTOs.Lots;
-using Auction.BLL.Services;
-using Auction.DAL.Data;
+﻿using Auction.DAL.Data;
 using Auction.DAL.Entities;
 using Auction.DAL.Enums;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 
-namespace Auction.BLL.Initializer;
+namespace Auction.DAL.Initializer;
 
-public static class Seeder
+public static class DevelopmentDataSeeder
 {
-    public static async Task SeedAsync(this IApplicationBuilder builder)
+    public static async Task SeedAsync(AuctionDbContext context)
     {
-        using var scope = builder.ApplicationServices.CreateScope();
-        using var context = scope.ServiceProvider.GetRequiredService<AuctionDbContext>();
-        var lotsService = scope.ServiceProvider.GetRequiredService<LotsService>();
-
-        if (context == null)
-        {
-            return;
-        }
-
-        await context.Database.MigrateAsync();
-
         await SeedCategoriesAsync(context);
         await SeedUsersAsync(context);
 
-
-        if (lotsService != null )
-        {
-            await SeedLotsAsync(lotsService, context);
-        }
-
+        await SeedLotsAsync(context);
     }
 
     public static async Task SeedUsersAsync(AuctionDbContext context)
@@ -45,7 +24,7 @@ public static class Seeder
         {
             new User
             {
-                Id = 1,
+                Id = 100,
                 UserName = "user1",
                 Email = "user1@example.com",
                 PasswordHash = "hashedpassword1",
@@ -66,41 +45,54 @@ public static class Seeder
         }
         var categoriesToSeed = new List<Category>
         {
-            new Category { Id = 1, Name = "Electronics", Description = "Electronics category" },
+            new Category { Id = 100, Name = "Electronics", Description = "Electronics category" },
         };
         await context.Categories.AddRangeAsync(categoriesToSeed);
         await context.SaveChangesAsync();
     }
 
-    public static async Task SeedLotsAsync(LotsService lotsService, AuctionDbContext context)
+    public static async Task SeedLotsAsync(AuctionDbContext context)
     {
         if (context.Lots.Any())
         {
             return;
         }
 
-        var lotsToSeed = new List<CreateLotDto>
+        var lotsToSeed = new List<Lot>
         {
-            new CreateLotDto
+            new Lot
             {
+                Id = 100,
                 Title = "Lot 1",
                 Description = "Description for Lot 1",
                 StartingPrice = 100.00m,
-                CategoryId = 1,
-                SellerId = 1
+                CurrentPrice = 100.00m,
+                MinBidStep = 10.00m,
+                StartTime = DateTime.UtcNow,
+                EndTime = DateTime.UtcNow.AddDays(7),
+                Status = LotStatus.Active,
+                CreatedAt = DateTime.UtcNow,
+                CategoryId = 100,
+                SellerId = 100
             },
-            new CreateLotDto
+            new Lot
             {
+                Id = 101,
                 Title = "Lot 2",
                 Description = "Description for Lot 2",
                 StartingPrice = 200.00m,
-                CategoryId = 1,
-                SellerId = 1
+                CurrentPrice = 200.00m,
+                MinBidStep = 20.00m,
+                StartTime = DateTime.UtcNow,
+                EndTime = DateTime.UtcNow.AddDays(7),
+                Status = LotStatus.Active,
+                CreatedAt = DateTime.UtcNow,
+                CategoryId = 100,
+                SellerId = 100
             }
         };
-        foreach (var lot in lotsToSeed)
-        {
-            await lotsService.CreateLotAsync(lot);
-        }
+
+        await context.Lots.AddRangeAsync(lotsToSeed);
+        await context.SaveChangesAsync();
     }
 }
