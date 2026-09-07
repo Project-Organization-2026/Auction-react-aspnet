@@ -1,6 +1,7 @@
 ﻿using Auction.DAL.Data;
 using Auction.DAL.Entities;
 using Auction.DAL.Enums;
+using Microsoft.EntityFrameworkCore;
 
 namespace Auction.DAL.Initializer;
 
@@ -8,23 +9,26 @@ public static class DevelopmentDataSeeder
 {
     public static async Task SeedAsync(AuctionDbContext context)
     {
+        if (CheckIfDataExists(context))
+        {
+            return;
+        }
+
         await SeedCategoriesAsync(context);
         await SeedUsersAsync(context);
 
         await SeedLotsAsync(context);
     }
 
+    public static bool CheckIfDataExists(AuctionDbContext context)
+        => context.Users.Any() || context.Categories.Any() || context.Lots.Any();
+
     public static async Task SeedUsersAsync(AuctionDbContext context)
     {
-        if (context.Users.Any())
-        {
-            return;
-        }
         var usersToSeed = new List<User>
         {
             new User
             {
-                Id = 100,
                 UserName = "user1",
                 Email = "user1@example.com",
                 PasswordHash = "hashedpassword1",
@@ -39,13 +43,9 @@ public static class DevelopmentDataSeeder
 
     public static async Task SeedCategoriesAsync(AuctionDbContext context)
     {
-        if (context.Categories.Any())
-        {
-            return;
-        }
         var categoriesToSeed = new List<Category>
         {
-            new Category { Id = 100, Name = "Electronics", Description = "Electronics category" },
+            new Category { Name = "Electronics", Description = "Electronics category" },
         };
         await context.Categories.AddRangeAsync(categoriesToSeed);
         await context.SaveChangesAsync();
@@ -53,16 +53,23 @@ public static class DevelopmentDataSeeder
 
     public static async Task SeedLotsAsync(AuctionDbContext context)
     {
-        if (context.Lots.Any())
+        var defaultCategory = await context.Categories.FirstOrDefaultAsync(c => c.Name == "Electronics");
+        var defaultUser = await context.Users.FirstOrDefaultAsync(u => u.UserName == "user1");
+
+        if (defaultUser == null)
         {
-            return;
+            throw new InvalidOperationException("No default user found to associate with the lots.");
+        }
+
+        if (defaultCategory == null)
+        {
+            throw new InvalidOperationException("No default category found to associate with the lots.");
         }
 
         var lotsToSeed = new List<Lot>
         {
             new Lot
             {
-                Id = 100,
                 Title = "Lot 1",
                 Description = "Description for Lot 1",
                 StartingPrice = 100.00m,
@@ -72,12 +79,11 @@ public static class DevelopmentDataSeeder
                 EndTime = DateTime.UtcNow.AddDays(7),
                 Status = LotStatus.Active,
                 CreatedAt = DateTime.UtcNow,
-                CategoryId = 100,
-                SellerId = 100
+                CategoryId = defaultCategory.Id,
+                SellerId = defaultUser.Id
             },
             new Lot
             {
-                Id = 101,
                 Title = "Lot 2",
                 Description = "Description for Lot 2",
                 StartingPrice = 200.00m,
@@ -87,8 +93,8 @@ public static class DevelopmentDataSeeder
                 EndTime = DateTime.UtcNow.AddDays(7),
                 Status = LotStatus.Active,
                 CreatedAt = DateTime.UtcNow,
-                CategoryId = 100,
-                SellerId = 100
+                CategoryId = defaultCategory.Id,
+                SellerId = defaultUser.Id
             }
         };
 

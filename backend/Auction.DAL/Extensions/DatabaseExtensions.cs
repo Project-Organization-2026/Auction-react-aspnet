@@ -3,6 +3,7 @@ using Auction.DAL.Initializer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace Auction.DAL.Extensions;
 
@@ -11,8 +12,12 @@ public static class DatabaseExtensions
     public static async Task<IHost> SeedDatabaseAsync(this IHost app)
     {
         using var scope = app.Services.CreateScope();
+
         var context = scope.ServiceProvider.GetRequiredService<AuctionDbContext>();
         var env = scope.ServiceProvider.GetRequiredService<IHostEnvironment>();
+
+        var loggerFactory = scope.ServiceProvider.GetRequiredService<ILoggerFactory>();
+        var logger = loggerFactory.CreateLogger(nameof(DatabaseExtensions));
 
         try
         {
@@ -27,7 +32,7 @@ public static class DatabaseExtensions
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"An error occurred while seeding the database: {ex.Message}");
+            logger.LogError(ex, "An error occurred while seeding the database.");
         }
         return app;
     }

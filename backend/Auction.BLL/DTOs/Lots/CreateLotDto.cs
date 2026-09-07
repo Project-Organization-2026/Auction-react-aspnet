@@ -12,5 +12,5 @@ public class CreateLotDto
     public LotStatus Status { get; set; } = LotStatus.Draft;
 
     public int SellerId { get; set; }
-    public int CategoryId { get; set; }
+    public int? CategoryId { get; set; }
 }

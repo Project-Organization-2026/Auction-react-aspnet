@@ -1,6 +1,7 @@
 ﻿using Auction.BLL.DTOs.Lots;
 using Auction.BLL.Services;
 using Microsoft.AspNetCore.Mvc;
+using Superpower.Model;
 
 namespace Auction.API.Controllers
 {
@@ -47,8 +48,12 @@ namespace Auction.API.Controllers
         {
             try
             {
-                var result = await _lotsService.DeleteLotAsync(id);
-                return Ok();
+                bool deleted = await _lotsService.DeleteLotAsync(id);
+                if (deleted)
+                {
+                    return Ok();
+                }
+                return StatusCode(500, "An error occurred while deleting the lot.");
             }
             catch (ArgumentException ex)
             {

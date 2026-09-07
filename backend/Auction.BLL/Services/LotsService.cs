@@ -57,16 +57,21 @@ public class LotsService
                 throw new ArgumentException($"Seller with ID {createLotDto.SellerId} not found.");
             }
 
-            var category = await _repositoryWrapper.CategoriesRepository.GetFirstOrDefaultAsync(new QueryOptions<Category>
+            Category? category = null;
+            if (createLotDto.CategoryId.HasValue)
             {
-                Filter = c => c.Id == createLotDto.CategoryId,
-                AsNoTracking = true,
-            });
+                category = await _repositoryWrapper.CategoriesRepository.GetFirstOrDefaultAsync(new QueryOptions<Category>
+                {
+                    Filter = c => c.Id == createLotDto.CategoryId,
+                    AsNoTracking = true,
+                });
 
-            if (category == null)
-            {
-                throw new ArgumentException($"Category with ID {createLotDto.CategoryId} not found.");
+                if (category == null)
+                {
+                    throw new ArgumentException($"Category with ID {createLotDto.CategoryId} not found.");
+                }
             }
+
             lot.SellerId = createLotDto.SellerId;
             lot.CategoryId = createLotDto.CategoryId;
             lot.CurrentPrice = createLotDto.StartingPrice;
@@ -79,7 +84,7 @@ public class LotsService
             {
                 var lotDto = _mapper.Map<LotDto>(lot);
                 lotDto.Seller = _mapper.Map<UserSummaryDto>(seller);
-                lotDto.Category = _mapper.Map<CategoryDto>(category);
+                lotDto.Category = category != null ? _mapper.Map<CategoryDto>(category) : null;
                 return lotDto;
             }
 

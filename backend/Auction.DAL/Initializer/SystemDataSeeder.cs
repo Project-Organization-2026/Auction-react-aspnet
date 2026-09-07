@@ -6,6 +6,6 @@ public static class SystemDataSeeder
 {
     public static async Task SeedAsync(AuctionDbContext context)
     {
-
+        await Task.CompletedTask;
     }
 }
