@@ -1,3 +1,5 @@
+using Auction.DAL.Enums;
+
 namespace Auction.DAL.Entities;
 
 public class User

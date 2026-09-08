@@ -1,4 +1,4 @@
-namespace Auction.DAL.Entities;
+namespace Auction.DAL.Enums;
 
 public enum UserRole
 {
