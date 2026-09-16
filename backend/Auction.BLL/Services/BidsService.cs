@@ -9,6 +9,7 @@
 
 namespace Auction.BLL.Services;
 using Auction.BLL.DTOs.Bids;
+using Auction.BLL.DTOs.Common;
 using Auction.DAL.Repositories.Interfaces;
 using AutoMapper;
 using System.Collections.Generic;
@@ -26,10 +27,24 @@ public class BidsService
         _mapper = mapper;
     }
 
-    public async Task<IEnumerable<BidDto>> GetBidsByLotIdAsync(int lotId) { 
-        
-        var bids = await _repositoryWrapper.BidsRepository.GetByLotIdAsync(lotId);
-        return _mapper.Map<IEnumerable<BidDto>>(bids);
+    public async Task<PagedResultDto<BidDto>> GetBidsByLotIdAsync(
+        int lotId,
+        int page = 1,
+        int pageSize = 20)
+    {
+        page = Math.Max(page, 1);
+        pageSize = Math.Clamp(pageSize, 1, 100);
+
+        var result = await _repositoryWrapper.BidsRepository
+            .GetByLotIdAsync(lotId, page, pageSize);
+
+        return new PagedResultDto<BidDto>
+        {
+            Items = _mapper.Map<IReadOnlyList<BidDto>>(result.Items),
+            Page = page,
+            PageSize = pageSize,
+            TotalCount = result.TotalCount
+        };
     }
     public async Task<BidDto> CreateBidAsync(CreateBidDto dto, int userId)
     {

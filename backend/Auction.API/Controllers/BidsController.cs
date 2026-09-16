@@ -18,9 +18,12 @@ public class BidsController : ControllerBase
     }
 
     [HttpGet("lots/{lotId:int}/bids", Name = "GetBidsByLotId")]
-    public async Task<IActionResult> GetBidsByLotId([FromRoute] int lotId)
+    public async Task<IActionResult> GetBidsByLotId(
+        [FromRoute] int lotId,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
     {
-        var bids = await _bidsService.GetBidsByLotIdAsync(lotId);
+        var bids = await _bidsService.GetBidsByLotIdAsync(lotId, page, pageSize);
         return Ok(bids);
     }
 

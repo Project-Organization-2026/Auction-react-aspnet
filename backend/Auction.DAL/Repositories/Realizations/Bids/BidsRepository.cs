@@ -15,12 +15,22 @@ public class BidsRepository : RepositoryBase<Bid>, IBidsRepository
         _context = context;
     }
 
-    public async Task<IEnumerable<Bid>> GetByLotIdAsync(int lotId)
+    public async Task<(IReadOnlyList<Bid> Items, int TotalCount)> GetByLotIdAsync(
+        int lotId,
+        int page,
+        int pageSize)
     {
-        return await _context.Bids
+        var query = _context.Bids
             .AsNoTracking()
-            .Where(bid => bid.LotId == lotId)
+            .Where(bid => bid.LotId == lotId);
+
+        var totalCount = await query.CountAsync();
+        var items = await query
             .OrderByDescending(bid => bid.PlacedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync();
+
+        return (items, totalCount);
     }
 }
