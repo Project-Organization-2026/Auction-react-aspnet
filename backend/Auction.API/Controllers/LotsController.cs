@@ -1,11 +1,13 @@
-﻿using Auction.BLL.DTOs.Lots;
+﻿﻿using Auction.BLL.DTOs.Lots;
 using Auction.BLL.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Auction.API.Controllers
 {
     [ApiController]
     [Route("[controller]")]
+    [Authorize]
     public class LotsController : ControllerBase
     {
         private readonly LotsService _lotsService;
