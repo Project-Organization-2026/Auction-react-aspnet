@@ -25,9 +25,16 @@ public class BidsRepository : RepositoryBase<Bid>, IBidsRepository
             .Where(bid => bid.LotId == lotId);
 
         var totalCount = await query.CountAsync();
+        var offset = (long)(page - 1) * pageSize;
+
+        if (offset > int.MaxValue)
+        {
+            return (Array.Empty<Bid>(), totalCount);
+        }
+
         var items = await query
             .OrderByDescending(bid => bid.PlacedAt)
-            .Skip((page - 1) * pageSize)
+            .Skip((int)offset)
             .Take(pageSize)
             .ToListAsync();
 
