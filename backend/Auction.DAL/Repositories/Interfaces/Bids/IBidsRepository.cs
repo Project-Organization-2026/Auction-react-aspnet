@@ -5,4 +5,5 @@ namespace Auction.DAL.Repositories.Interfaces.Bids;
 
 public interface IBidsRepository : IRepositoryBase<Bid>
 {
+    Task<IEnumerable<Bid>> GetByLotIdAsync(int lotId);
 }
