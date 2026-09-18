@@ -63,4 +63,11 @@ public class RepositoryWrapper : IRepositoryWrapper
     {
         return await _context.SaveChangesAsync();
     }
+
+    /// <inheritdoc />
+    public Task<Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction> BeginTransactionAsync()
+    {
+        return Microsoft.EntityFrameworkCore.RelationalDatabaseFacadeExtensions.BeginTransactionAsync(
+            _context.Database, System.Data.IsolationLevel.ReadCommitted);
+    }
 }

@@ -1,12 +1,3 @@
-// TODO: Implement BidsService.
-// Required operations:
-// - GetBidsByLotIdAsync(int lotId): query BidsRepository by LotId, order by newest first,
-//   and map the result to IEnumerable<BidDto>.
-// - CreateBidAsync(CreateBidDto dto, int userId): load the lot, verify it exists and
-//   DateTime.UtcNow < lot.EndTime, verify dto.Amount > lot.CurrentPrice, set the new
-//   current price, create the bid with userId, save both changes, and return BidDto.
-// Consider ArgumentException/InvalidOperationException conventions used by LotsService.
-
 namespace Auction.BLL.Services;
 using Auction.BLL.DTOs.Bids;
 using Auction.BLL.DTOs.Common;
@@ -14,7 +5,7 @@ using Auction.DAL.Repositories.Interfaces;
 using AutoMapper;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Auction.DAL.Repositories.Options;
+using Auction.DAL.Enums;
 using Auction.DAL.Entities;
 
 public class BidsService
@@ -27,6 +18,7 @@ public class BidsService
         _mapper = mapper;
     }
 
+    /// <summary>Returns newest bids with bounded page and page-size values.</summary>
     public async Task<PagedResultDto<BidDto>> GetBidsByLotIdAsync(
         int lotId,
         int page = 1,
@@ -46,20 +38,18 @@ public class BidsService
             TotalCount = result.TotalCount
         };
     }
+    /// <summary>Validates a locked active lot and commits its price and bid atomically.</summary>
     public async Task<BidDto> CreateBidAsync(CreateBidDto dto, int userId)
     {
-        var lot = await _repositoryWrapper.LotsRepository.GetFirstOrDefaultAsync(new QueryOptions<Lot>
-        {
-            Filter = l => l.Id == dto.LotId,
-            AsNoTracking = false,
-        });
+        await using var transaction = await _repositoryWrapper.BeginTransactionAsync();
+        var lot = await _repositoryWrapper.LotsRepository.GetForUpdateAsync(dto.LotId);
 
         if (lot == null)
         {
             throw new ArgumentException($"Lot with ID {dto.LotId} not found.");
         }
 
-        if (DateTime.UtcNow >= lot.EndTime)
+        if (lot.Status != LotStatus.Active || DateTime.UtcNow >= lot.EndTime)
         {
             throw new InvalidOperationException($"Lot with ID {dto.LotId} is closed.");
         }
@@ -74,6 +64,7 @@ public class BidsService
         bid.UserId = userId;
         await _repositoryWrapper.BidsRepository.CreateAsync(bid);
         await _repositoryWrapper.SaveChangesAsync();
+        await transaction.CommitAsync();
         return _mapper.Map<BidDto>(bid);
     }
 }

@@ -22,6 +22,7 @@ public class JwtService
 
     public string GetAccessToken(User user)
     {
+        JwtSettings.ValidateSecretKey(_jwtSettings.SecretKey);
         if (string.IsNullOrWhiteSpace(_jwtSettings.SecretKey))
         {
             _logger.LogError("JWT secret key is not configured.");
