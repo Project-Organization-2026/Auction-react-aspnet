@@ -97,7 +97,7 @@ function App() {
         </div>
         <button className="header-filter">⌖ Current</button>
         <button className="header-filter">♧ 100 miles</button>
-        <button className="search-submit">⌕</button>
+        <button className="search-submit" aria-label="Submit search">⌕</button>
         <div className="header-actions">
           <button aria-label="Account">♙</button>
           <button aria-label="Wishlist">♡</button>

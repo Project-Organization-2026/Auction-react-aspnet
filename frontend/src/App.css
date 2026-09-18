@@ -101,10 +101,14 @@ input {
 .search-box input {
     width: 100%;
     border: 0;
-    outline: 0;
     color: var(--cream);
     background: transparent;
     font-size: 14px;
+}
+
+.search-box input:focus-visible {
+    outline: 2px solid var(--orange);
+    outline-offset: 4px;
 }
 
 .header-filter {
@@ -451,7 +455,7 @@ input {
     display: flex;
     justify-content: space-between;
     padding-top: 28px;
-    color: #686f77;
+    color: var(--muted);
     font-size: 11px;
 }
 
@@ -470,6 +474,19 @@ input {
 }
 
 @media (max-width: 800px) {
+    .site-header {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto auto;
+        gap: 12px 8px;
+        padding: 14px 12px;
+    }
+
+    .brand { font-size: 20px; }
+    .menu-button { margin-left: 0; }
+    .header-actions { gap: 4px; }
+    .search-box { grid-column: 1 / 3; grid-row: 2; min-width: 0; }
+    .search-submit { grid-column: 3; grid-row: 2; justify-self: end; }
+    .search-box input { min-width: 0; }
     .app-shell {
         padding-inline: 18px;
     }
@@ -497,4 +514,15 @@ input {
         flex-direction: column;
         gap: 10px;
     }
+}
+
+@media (max-width: 480px) {
+    .houses-section {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: auto auto 300px 300px 360px;
+        grid-template-areas: "notice" "title" "left" "middle" "stack";
+    }
+
+    .bid-grid { grid-template-columns: minmax(0, 1fr); }
+    .site-footer { grid-template-columns: minmax(0, 1fr); }
 }
