@@ -431,6 +431,13 @@ FodyWeavers.xsd
 # Frontend / Vite
 frontend/node_modules/
 frontend/dist/
+
+# Local review and integration-test artifacts
+tmp/
+
+# Local-only regression notes/checks
+backend/Auction.RegressionTests/
+
 frontend/build/
 frontend/.vite/
 frontend/.env
