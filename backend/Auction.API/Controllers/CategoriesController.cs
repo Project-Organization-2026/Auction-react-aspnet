@@ -55,10 +55,6 @@ public class CategoriesController : ControllerBase
         {
             return BadRequest(ex.Message);
         }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(ex.Message);
-        }
     }
 
     [HttpPut("{id:int}")]
@@ -80,10 +76,6 @@ public class CategoriesController : ControllerBase
         {
             return BadRequest(ex.Message);
         }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(ex.Message);
-        }
     }
 
     [HttpDelete("{id:int}")]
@@ -98,10 +90,6 @@ public class CategoriesController : ControllerBase
         catch (KeyNotFoundException ex)
         {
             return NotFound(ex.Message);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(ex.Message);
         }
     }
 }

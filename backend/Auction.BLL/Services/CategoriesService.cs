@@ -3,7 +3,6 @@ using Auction.DAL.Entities;
 using Auction.DAL.Repositories.Interfaces;
 using Auction.DAL.Repositories.Options;
 using AutoMapper;
-using Microsoft.EntityFrameworkCore;
 
 namespace Auction.BLL.Services;
 
@@ -47,15 +46,7 @@ public class CategoriesService
 
         var category = _mapper.Map<Category>(dto);
         await _repositoryWrapper.CategoriesRepository.CreateAsync(category);
-
-        try
-        {
-            await _repositoryWrapper.SaveChangesAsync();
-        }
-        catch (DbUpdateException ex)
-        {
-            throw new InvalidOperationException("Failed to create category.", ex);
-        }
+        await _repositoryWrapper.SaveChangesAsync();
 
         return _mapper.Map<CategoryDto>(category);
     }
@@ -71,15 +62,7 @@ public class CategoriesService
         }
 
         _mapper.Map(dto, category);
-
-        try
-        {
-            await _repositoryWrapper.SaveChangesAsync();
-        }
-        catch (DbUpdateException ex)
-        {
-            throw new InvalidOperationException("Failed to update category.", ex);
-        }
+        await _repositoryWrapper.SaveChangesAsync();
 
         return _mapper.Map<CategoryDto>(category);
     }
@@ -93,15 +76,7 @@ public class CategoriesService
         }
 
         _repositoryWrapper.CategoriesRepository.Delete(category);
-
-        try
-        {
-            await _repositoryWrapper.SaveChangesAsync();
-        }
-        catch (DbUpdateException ex)
-        {
-            throw new InvalidOperationException("Failed to delete category.", ex);
-        }
+        await _repositoryWrapper.SaveChangesAsync();
     }
 
     private async Task<Category?> FindCategoryAsync(int id, bool asNoTracking)
