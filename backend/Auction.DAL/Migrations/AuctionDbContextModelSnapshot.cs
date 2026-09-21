@@ -160,7 +160,10 @@ namespace Auction.DAL.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("LotId");
+
                     b.HasIndex("LotId")
+                        .HasDatabaseName("IX_LotImages_LotId_IsMain")
                         .IsUnique()
                         .HasFilter("\"IsMain\" = TRUE");
 

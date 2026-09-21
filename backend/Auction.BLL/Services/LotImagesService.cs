@@ -3,7 +3,6 @@ using Auction.DAL.Entities;
 using Auction.DAL.Repositories.Interfaces;
 using Auction.DAL.Repositories.Options;
 using AutoMapper;
-using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 
 namespace Auction.BLL.Services;
@@ -57,22 +56,20 @@ public class LotImagesService
 
     public async Task DeleteImageAsync(int imageId, int userId)
     {
-        var image = await _repositoryWrapper.LotImagesRepository.GetFirstOrDefaultAsync(
-            new QueryOptions<LotImage>
-            {
-                Filter = item => item.Id == imageId,
-                Include = query => query.Include(item => item.Lot),
-                AsNoTracking = false
-            });
+        await using var transaction = await _repositoryWrapper.BeginTransactionAsync();
+        var lot = await _repositoryWrapper.LotsRepository.GetForUpdateWithImagesAsync(
+            await FindLotIdForImageAsync(imageId));
+        EnsureLotOwner(lot, userId, "delete this image");
 
+        var image = lot!.Images.FirstOrDefault(item => item.Id == imageId);
         if (image is null)
         {
             throw new ArgumentException($"Lot image with ID {imageId} not found.");
         }
 
-        EnsureLotOwner(image.Lot, userId, "delete this image");
         _repositoryWrapper.LotImagesRepository.Delete(image);
         await _repositoryWrapper.SaveChangesAsync();
+        await transaction.CommitAsync();
     }
 
     public async Task<LotImageDto> SetMainImageAsync(
@@ -95,11 +92,29 @@ public class LotImagesService
             image.IsMain = false;
         }
 
+        await _repositoryWrapper.SaveChangesAsync();
         imageToSet.IsMain = true;
         await _repositoryWrapper.SaveChangesAsync();
         await transaction.CommitAsync();
 
         return _mapper.Map<LotImageDto>(imageToSet);
+    }
+
+    private async Task<int> FindLotIdForImageAsync(int imageId)
+    {
+        var image = await _repositoryWrapper.LotImagesRepository.GetFirstOrDefaultAsync(
+            new QueryOptions<LotImage>
+            {
+                Filter = item => item.Id == imageId,
+                AsNoTracking = true
+            });
+
+        if (image is null)
+        {
+            throw new ArgumentException($"Lot image with ID {imageId} not found.");
+        }
+
+        return image.LotId;
     }
 
     private static void EnsureLotOwner(Lot? lot, int userId, string action)

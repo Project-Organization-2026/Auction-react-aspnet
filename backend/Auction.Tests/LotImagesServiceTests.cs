@@ -137,10 +137,13 @@ public class LotImagesServiceTests
         _images.Setup(item => item.GetFirstOrDefaultAsync(
                 It.IsAny<Auction.DAL.Repositories.Options.QueryOptions<LotImage>>()))
             .ReturnsAsync(image);
+        _lots.Setup(item => item.GetForUpdateWithImagesAsync(1))
+            .ReturnsAsync(new Lot { Id = 1, SellerId = 10, Images = new List<LotImage> { image } });
 
         await _service.DeleteImageAsync(2, 10);
 
         _images.Verify(item => item.Delete(image), Times.Once);
         _wrapper.Verify(item => item.SaveChangesAsync(), Times.Once);
+        _transaction.Verify(item => item.CommitAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 }

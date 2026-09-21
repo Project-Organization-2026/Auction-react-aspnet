@@ -24,12 +24,8 @@ public partial class AddUniqueMainLotImageIndex : Migration
             );
             """);
 
-        migrationBuilder.DropIndex(
-            name: "IX_LotImages_LotId",
-            table: "LotImages");
-
         migrationBuilder.CreateIndex(
-            name: "IX_LotImages_LotId",
+            name: "IX_LotImages_LotId_IsMain",
             table: "LotImages",
             column: "LotId",
             unique: true,
@@ -39,12 +35,7 @@ public partial class AddUniqueMainLotImageIndex : Migration
     protected override void Down(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.DropIndex(
-            name: "IX_LotImages_LotId",
+            name: "IX_LotImages_LotId_IsMain",
             table: "LotImages");
-
-        migrationBuilder.CreateIndex(
-            name: "IX_LotImages_LotId",
-            table: "LotImages",
-            column: "LotId");
     }
 }
