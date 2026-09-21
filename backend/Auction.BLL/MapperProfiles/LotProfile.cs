@@ -1,4 +1,5 @@
 ﻿using Auction.BLL.DTOs.Lots;
+using Auction.BLL.DTOs.LotImages;
 using Auction.DAL.Entities;
 using AutoMapper;
 
@@ -11,5 +12,7 @@ public class LotProfile : Profile
         CreateMap<Lot, LotDto>();
         CreateMap<CreateLotDto, Lot>();
         CreateMap<UpdateLotDto, Lot>();
+        CreateMap<LotImage, LotImageDto>();
+        CreateMap<AddLotImageDto, LotImage>();
     }
 }

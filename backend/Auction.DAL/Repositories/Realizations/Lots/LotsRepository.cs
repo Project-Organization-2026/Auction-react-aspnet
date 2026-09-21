@@ -32,4 +32,31 @@ public class LotsRepository : RepositoryBase<Lot>, ILotsRepository
 
         return lot;
     }
+
+    public async Task<Lot?> GetForUpdateWithImagesAsync(int lotId)
+    {
+        if (_context.Database.CurrentTransaction is null)
+            throw new InvalidOperationException("A transaction is required to lock a lot.");
+
+        return await _context.Lots
+            .FromSqlInterpolated($"SELECT * FROM \"Lots\" WHERE \"Id\" = {lotId} FOR UPDATE")
+            .Include(lot => lot.Images)
+            .AsTracking()
+            .SingleOrDefaultAsync();
+    }
+
+    public async Task<IEnumerable<Lot>> GetLotsBySellerIdAsync(int sellerId)
+    {
+        return await _context.Lots
+            .Where(lot => lot.SellerId == sellerId)
+            .ToListAsync();
+    }
+
+    public async Task<IEnumerable<Lot>> GetLotByIdAsync(int ID)
+    {
+        return await _context.Lots
+            .Where(lot => lot.Id == ID)
+            .ToListAsync();
+    }
+
 }
