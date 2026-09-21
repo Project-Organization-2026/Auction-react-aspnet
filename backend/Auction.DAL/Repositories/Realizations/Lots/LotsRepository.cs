@@ -32,4 +32,19 @@ public class LotsRepository : RepositoryBase<Lot>, ILotsRepository
 
         return lot;
     }
+
+    public async Task<IEnumerable<Lot>> GetLotsBySellerIdAsync(int sellerId)
+    {
+        return await _context.Lots
+            .Where(lot => lot.SellerId == sellerId)
+            .ToListAsync();
+    }
+
+    public async Task<IEnumerable<Lot>> GetLotByIdAsync(int ID)
+    {
+        return await _context.Lots
+            .Where(lot => lot.Id == ID)
+            .ToListAsync();
+    }
+
 }

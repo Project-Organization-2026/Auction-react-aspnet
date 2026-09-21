@@ -1,4 +1,5 @@
 ﻿using Auction.BLL.DTOs.Categories;
+using Auction.BLL.DTOs.LotImages;
 using Auction.BLL.DTOs.Users;
 using Auction.DAL.Entities;
 using Auction.DAL.Enums;
@@ -21,4 +22,6 @@ public class LotDto
     public UserSummaryDto Seller { get; set; } = null!;
     public UserSummaryDto? Winner { get; set; }
     public CategoryDto? Category { get; set; }
+
+    public ICollection<LotImageDto> Images { get; set; } = new List<LotImageDto>();
 }
