@@ -77,6 +77,11 @@ public class AuctionDbContext : DbContext
             entity.Property(e => e.Id).ValueGeneratedOnAdd();
             entity.Property(e => e.Url).IsRequired();
 
+            // The service serializes main-image changes; this index is an additional database safeguard.
+            entity.HasIndex(e => e.LotId)
+                .IsUnique()
+                .HasFilter("\"IsMain\" = TRUE");
+
             entity.HasOne(e => e.Lot)
                 .WithMany(l => l.Images)
                 .HasForeignKey(e => e.LotId)

@@ -3,6 +3,7 @@ using Auction.BLL.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using System.ComponentModel.DataAnnotations;
 
 namespace Auction.API.Controllers;
 
@@ -32,6 +33,10 @@ public class LotImagesController : ControllerBase
         {
             var image = await _lotImagesService.AddImageToLotAsync(lotId, dto, userId);
             return StatusCode(StatusCodes.Status201Created, image);
+        }
+        catch (ValidationException ex)
+        {
+            return BadRequest(ex.Message);
         }
         catch (ArgumentException ex)
         {

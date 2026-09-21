@@ -160,7 +160,9 @@ namespace Auction.DAL.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("LotId");
+                    b.HasIndex("LotId")
+                        .IsUnique()
+                        .HasFilter("\"IsMain\" = TRUE");
 
                     b.ToTable("LotImages");
                 });

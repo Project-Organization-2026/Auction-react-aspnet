@@ -4,6 +4,7 @@ using Auction.DAL.Repositories.Interfaces;
 using Auction.DAL.Repositories.Options;
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
 
 namespace Auction.BLL.Services;
 
@@ -23,13 +24,14 @@ public class LotImagesService
         AddLotImageDto dto,
         int userId)
     {
-        var lot = await GetLotWithImagesAsync(lotId);
-        EnsureLotOwner(lot, userId, "add images");
-
         if (string.IsNullOrWhiteSpace(dto.Url))
         {
-            throw new ArgumentException("Image URL is required.");
+            throw new ValidationException("Image URL is required.");
         }
+
+        await using var transaction = await _repositoryWrapper.BeginTransactionAsync();
+        var lot = await _repositoryWrapper.LotsRepository.GetForUpdateWithImagesAsync(lotId);
+        EnsureLotOwner(lot, userId, "add images");
 
         if (dto.IsMain)
         {
@@ -37,6 +39,10 @@ public class LotImagesService
             {
                 image.IsMain = false;
             }
+
+            // Clear the previous main image before inserting the new one because
+            // the database has a unique partial index for main images.
+            await _repositoryWrapper.SaveChangesAsync();
         }
 
         var imageToCreate = _mapper.Map<LotImage>(dto);
@@ -44,6 +50,7 @@ public class LotImagesService
 
         await _repositoryWrapper.LotImagesRepository.CreateAsync(imageToCreate);
         await _repositoryWrapper.SaveChangesAsync();
+        await transaction.CommitAsync();
 
         return _mapper.Map<LotImageDto>(imageToCreate);
     }
@@ -73,7 +80,8 @@ public class LotImagesService
         int lotId,
         int userId)
     {
-        var lot = await GetLotWithImagesAsync(lotId);
+        await using var transaction = await _repositoryWrapper.BeginTransactionAsync();
+        var lot = await _repositoryWrapper.LotsRepository.GetForUpdateWithImagesAsync(lotId);
         EnsureLotOwner(lot, userId, "set the main image");
 
         var imageToSet = lot!.Images.FirstOrDefault(image => image.Id == imageId);
@@ -89,19 +97,9 @@ public class LotImagesService
 
         imageToSet.IsMain = true;
         await _repositoryWrapper.SaveChangesAsync();
+        await transaction.CommitAsync();
 
         return _mapper.Map<LotImageDto>(imageToSet);
-    }
-
-    private async Task<Lot?> GetLotWithImagesAsync(int lotId)
-    {
-        return await _repositoryWrapper.LotsRepository.GetFirstOrDefaultAsync(
-            new QueryOptions<Lot>
-            {
-                Filter = lot => lot.Id == lotId,
-                Include = query => query.Include(lot => lot.Images),
-                AsNoTracking = false
-            });
     }
 
     private static void EnsureLotOwner(Lot? lot, int userId, string action)
