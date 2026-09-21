@@ -58,6 +58,7 @@ jobs:
             /d:sonar.host.url="https://sonarcloud.io" `
             /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml"
 
+          dotnet restore Auction.slnx
           dotnet build Auction.slnx --no-restore
           dotnet test Auction.Tests/Auction.Tests.csproj --no-build --collect:"XPlat Code Coverage" -- `
             DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
