@@ -1,4 +1,4 @@
-# Auction-react-aspent
+# Auction-react-aspnet
 
 - [![Technical Debt](https://sonarcloud.io/api/project_badges/measure?project=Project-Organization-2026_Auction-react-aspnet&metric=sqale_index)](https://sonarcloud.io/summary/new_code?id=Project-Organization-2026_Auction-react-aspnet)
 
