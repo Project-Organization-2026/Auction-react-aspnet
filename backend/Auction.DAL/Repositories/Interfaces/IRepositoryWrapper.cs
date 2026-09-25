@@ -20,4 +20,7 @@ public interface IRepositoryWrapper
         where TEntity : class;
 
     Task<int> SaveChangesAsync();
+
+    /// <summary>Starts a read-committed transaction shared by all repositories.</summary>
+    Task<Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction> BeginTransactionAsync();
 }

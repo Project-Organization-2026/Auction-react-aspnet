@@ -1,122 +1,190 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import "./App.css";
 
-function App() {
-  const [count, setCount] = useState(0)
+const imageSources = [
+  "https://d8iqbmvu05s9c.cloudfront.net/ajprhqgqg1otf7d5sm7u3brf27gv",
+  "https://cdn.pixabay.com/photo/2014/06/03/19/38/board-361516_1280.jpg",
+];
 
+const bids = [
+  ["Rebecca Ackroyd (b. 1987)", "Gerrard Street East", "pink"],
+  ["Still Life With Gold", "King Street West", "gold"],
+  ["Floral Memory", "Queen Street", "purple"],
+  ["Abstract Form No. 4", "Dundas Street", "blue"],
+  ["Green Horizon", "Gerrard Street East", "green"],
+  ["Stacked Shapes", "King Street West", "orange"],
+  ["The Visitor", "Queen Street", "sepia"],
+  ["Autumn Garden", "Dundas Street", "red"],
+];
+
+function ArtworkImage({ imageIndex, alt }) {
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+    <img
+      className="art-image"
+      src={imageSources[imageIndex]}
+      alt={alt}
+      loading="lazy"
+    />
+  );
 }
 
-export default App
+function BidCard({ title, location, imageIndex }) {
+  return (
+    <article className="bid-card">
+      <ArtworkImage imageIndex={imageIndex} alt={title} />
+      <div className="bid-card__body">
+        <div className="bid-card__time">24h : 30m : 30s</div>
+        <h3>{title}</h3>
+        <p>{location}</p>
+        <p className="bid-card__seller">Auction House</p>
+        <div className="bid-card__footer">
+          <div className="avatar-stack" aria-label="Active bidders">
+            {[47, 49, 12, 13, 44].map((avatar, index) => (
+              <span key={avatar}>
+                <span className="avatar-fallback">
+                  {["JD", "AK", "MK", "JS", "AL"][index]}
+                </span>
+                <img
+                  src={`https://i.pravatar.cc/64?img=${avatar}`}
+                  alt=""
+                  loading="lazy"
+                  onError={(event) => {
+                    event.currentTarget.hidden = true;
+                  }}
+                />
+              </span>
+            ))}
+          </div>
+          <span className="bid-price">100+</span>
+          <span className="bid-card__arrow" aria-hidden="true">
+            ↗
+          </span>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function HouseCard({ title, imageIndex, layout }) {
+  return (
+    <article className={`hero-house hero-house--${layout}`}>
+      <div className="hero-house__media">
+        <ArtworkImage imageIndex={imageIndex} alt={title} />
+      </div>
+      <div className="hero-house__details">
+        <span>Auction On</span>
+        <h2>{title}</h2>
+        <p>Gerrard Street East</p>
+        <a className="text-button" href="#bids">
+          Explore Now <span>→</span>
+        </a>
+      </div>
+    </article>
+  );
+}
+
+function App() {
+  return (
+    <main className="app-shell">
+      <header className="site-header">
+        <a className="brand" href="#top">
+          <span className="brand-accent">best</span>
+          <span>auction</span>
+        </a>
+        <button className="menu-button">Menu</button>
+        <div className="search-box">
+          <span>⌕</span>
+          <input aria-label="Search" placeholder="Search" />
+        </div>
+        <button className="header-filter">⌖ Current</button>
+        <button className="header-filter">♧ 100 miles</button>
+        <button className="search-submit" aria-label="Submit search">⌕</button>
+        <div className="header-actions">
+          <button aria-label="Account">♙</button>
+          <button aria-label="Wishlist">♡</button>
+        </div>
+      </header>
+      <section className="houses-section" aria-labelledby="houses-title">
+        <div className="notice-bar">
+          <span>←</span> Liquidate your estate or business within{" "}
+          <strong>7 Days</strong> <span>→</span>
+        </div>
+        <h1 id="houses-title">Explore Houses</h1>
+        <HouseCard
+          title="Elegant Vintage Product"
+          imageIndex={0}
+          layout="image-top"
+        />
+        <HouseCard
+          title="Vintage Product"
+          imageIndex={1}
+          layout="image-bottom"
+        />
+        <div className="houses-section__stack">
+          <HouseCard
+            title="Modern Ceramic"
+            imageIndex={1}
+            layout="image-left"
+          />
+          <HouseCard
+            title="Botanical Study"
+            imageIndex={0}
+            layout="image-right"
+          />
+        </div>
+      </section>
+      <section className="bids-section" id="bids">
+        <div className="section-heading">
+          <h1>Bids Near You</h1>
+          <a href="#all">
+            View all <span>→</span>
+          </a>
+        </div>
+        <div className="bid-grid">
+          {bids.map(([title, location], index) => (
+            <BidCard
+              key={title}
+              title={title}
+              location={location}
+              imageIndex={index % imageSources.length}
+            />
+          ))}
+        </div>
+      </section>
+      <footer className="site-footer">
+        <div>
+          <a className="brand" href="#top">
+            <span className="brand-accent">best</span>
+            <span>auction</span>
+          </a>
+          <p>
+            Bestauction is the new way to discover
+            <br />
+            and collect remarkable things.
+          </p>
+        </div>
+        <div>
+          <h4>Auctions</h4>
+          <a href="#all">All Auctions</a>
+          <a href="#ending">Ending Soon</a>
+          <a href="#categories">Categories</a>
+        </div>
+        <div>
+          <h4>Resources</h4>
+          <a href="#about">About</a>
+          <a href="#help">Help Center</a>
+          <a href="#contact">Contact Us</a>
+        </div>
+        <div>
+          <h4>Are you looking to</h4>
+          <button className="outline-button">Sell</button>
+        </div>
+      </footer>
+      <div className="footer-bottom">
+        <span>© 2026 Bestauction. All rights reserved.</span>
+        <span>Terms &nbsp; Privacy Policy &nbsp; Legal Disclaimer</span>
+      </div>
+    </main>
+  );
+}
+
+export default App;
