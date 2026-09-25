@@ -75,6 +75,7 @@ builder.Services.AddDbContext<AuctionDbContext>(options =>
 });
 
 var app = builder.Build();
+app.UseMiddleware<Auction.API.Middleware.ExceptionHandlingMiddleware>();
 
 // Seed initial development data
 await app.SeedDatabaseAsync();
