@@ -8,6 +8,11 @@ public class ExceptionHandlingMiddleware
     private readonly RequestDelegate _next;
     private readonly ILogger<ExceptionHandlingMiddleware> _logger;
 
+    private static readonly JsonSerializerOptions SerializerOptions = new JsonSerializerOptions
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    };
+
     public ExceptionHandlingMiddleware(RequestDelegate next, ILogger<ExceptionHandlingMiddleware> logger)
     {
         _next = next;
@@ -22,7 +27,7 @@ public class ExceptionHandlingMiddleware
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Виникла неперехоплена помилка: {Message}", ex.Message);
+            _logger.LogError(ex, "An unhandled exception occurred.");
             await HandleExceptionAsync(context, ex);
         }
     }
@@ -35,11 +40,13 @@ public class ExceptionHandlingMiddleware
         var response = new
         {
             statusCode = context.Response.StatusCode,
-            message = "Внутрішня помилка сервера. Спробуйте пізніше.",
+            message = "Internal Server Error from the custom middleware.",
             detailed = exception.Message
         };
 
-        var jsonOptions = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
-        return context.Response.WriteAsync(JsonSerializer.Serialize(response, jsonOptions));
+        return context.Response.WriteAsync(
+            JsonSerializer.Serialize(response, SerializerOptions),
+            context.RequestAborted
+        );
     }
 }
