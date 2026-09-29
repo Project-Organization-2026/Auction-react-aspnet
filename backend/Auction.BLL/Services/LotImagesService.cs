@@ -67,8 +67,20 @@ public class LotImagesService
             throw new ArgumentException($"Lot image with ID {imageId} not found.");
         }
 
+        var wasMain = image.IsMain;
         _repositoryWrapper.LotImagesRepository.Delete(image);
         await _repositoryWrapper.SaveChangesAsync();
+
+        if (wasMain)
+        {
+            var replacement = lot.Images.FirstOrDefault(item => item.Id != imageId);
+            if (replacement is not null)
+            {
+                replacement.IsMain = true;
+                await _repositoryWrapper.SaveChangesAsync();
+            }
+        }
+
         await transaction.CommitAsync();
     }
 
