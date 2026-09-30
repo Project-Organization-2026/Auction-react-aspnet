@@ -3,6 +3,7 @@ using Auction.DAL.Entities;
 using Auction.DAL.Repositories.Interfaces;
 using Auction.DAL.Repositories.Options;
 using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 
 namespace Auction.BLL.Services;
 
@@ -94,12 +95,16 @@ public class CategoriesService
 
     private async Task EnsureNameAvailableAsync(string name, int? currentCategoryId)
     {
-        var normalizedName = name.Trim().ToLower();
+        // Escape LIKE wildcards so category names containing %, _ or \ match literally.
+        var escapedName = name.Trim()
+            .Replace("\\", "\\\\")
+            .Replace("%", "\\%")
+            .Replace("_", "\\_");
         var exists = await _repositoryWrapper.CategoriesRepository.AnyAsync(
             new QueryOptions<Category>
             {
                 Filter = category =>
-                    category.Name.ToLower() == normalizedName &&
+                    EF.Functions.ILike(category.Name, escapedName, "\\") &&
                     (!currentCategoryId.HasValue || category.Id != currentCategoryId.Value),
                 AsNoTracking = true
             });

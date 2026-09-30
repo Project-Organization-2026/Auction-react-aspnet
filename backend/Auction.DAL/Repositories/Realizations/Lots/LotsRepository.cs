@@ -54,7 +54,6 @@ public class LotsRepository : RepositoryBase<Lot>, ILotsRepository
             .ThenByDescending(lot => lot.Id)
             .Skip((int)offset)
             .Take(pageSize)
-            .AsSplitQuery()
             .ToListAsync();
 
         return (items, totalCount);
@@ -69,7 +68,6 @@ public class LotsRepository : RepositoryBase<Lot>, ILotsRepository
         }
 
         return AddDetails(query)
-            .AsSplitQuery()
             .SingleOrDefaultAsync(lot => lot.Id == lotId);
     }
 
@@ -110,6 +108,7 @@ public class LotsRepository : RepositoryBase<Lot>, ILotsRepository
             .Include(lot => lot.Winner)
             .Include(lot => lot.Category)
             .Include(lot => lot.Images)
-            .Include(lot => lot.Bids);
+            .Include(lot => lot.Bids)
+            .AsSplitQuery();
     }
 }
