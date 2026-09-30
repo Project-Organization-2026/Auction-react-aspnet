@@ -17,6 +17,12 @@ public class LotDto
     public DateTime StartTime { get; set; }
     public DateTime EndTime { get; set; }
     public LotStatus Status { get; set; } = LotStatus.Draft;
+    public AuctionSettlementMode SettlementMode { get; set; }
+    public long? ChainId { get; set; }
+    public string? ContractAddress { get; set; }
+    public string? OnChainAuctionId { get; set; }
+    public string? CreationTransactionHash { get; set; }
+    public string? SettlementTransactionHash { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public UserSummaryDto Seller { get; set; } = null!;

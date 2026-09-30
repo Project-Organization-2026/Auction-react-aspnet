@@ -11,6 +11,7 @@ Full-stack auction application built with React, ASP.NET Core, Entity Framework 
 - User profile, created-lot history and simulated balance top-ups.
 - Category administration and lot image management.
 - Central exception handling, CORS, Swagger JWT support and a health endpoint.
+- Hybrid settlement schema prepared for future MetaMask/smart-contract auctions.
 
 ## Requirements
 
@@ -106,3 +107,11 @@ npm run dev
 ```
 
 The default CORS configuration allows `http://localhost:5173`. Additional frontend origins can be configured through `Cors:AllowedOrigins`.
+
+## Blockchain preparation
+
+Blockchain execution is intentionally disabled until the Hardhat/Ganache setup,
+contract and deployment artifacts are ready. Existing auctions continue to use
+the internal balance flow. See
+[`docs/blockchain-integration.md`](docs/blockchain-integration.md) for the safe
+MetaMask integration contract and remaining work.

@@ -74,6 +74,12 @@ public class BidsService
             throw new InvalidOperationException($"Lot with ID {dto.LotId} is closed.");
         }
 
+        if (lot.SettlementMode == AuctionSettlementMode.Blockchain)
+        {
+            throw new InvalidOperationException(
+                "Blockchain lot bids must be submitted through the auction smart contract.");
+        }
+
         if (lot.SellerId == userId)
         {
             throw new InvalidOperationException("A seller cannot bid on their own lot.");

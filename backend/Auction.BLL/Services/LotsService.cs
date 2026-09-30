@@ -77,6 +77,7 @@ public class LotsService
 
         var lot = _mapper.Map<Lot>(dto);
         lot.SellerId = sellerId;
+        lot.SettlementMode = AuctionSettlementMode.OffChain;
         lot.CurrentPrice = dto.StartingPrice;
         lot.StartTime = DateTime.UtcNow;
         lot.EndTime = NormalizeUtc(dto.EndTime);
@@ -140,6 +141,12 @@ public class LotsService
         if (lot!.Status == LotStatus.Completed)
         {
             throw new InvalidOperationException("The lot is already completed.");
+        }
+
+        if (lot.SettlementMode == AuctionSettlementMode.Blockchain)
+        {
+            throw new InvalidOperationException(
+                "Blockchain lots must be settled through the auction smart contract.");
         }
 
         if (lot.Status != LotStatus.Active)

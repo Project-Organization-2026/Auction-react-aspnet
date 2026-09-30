@@ -1,9 +1,13 @@
+using Auction.DAL.Data;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace Auction.DAL.Migrations;
 
+[DbContext(typeof(AuctionDbContext))]
+[Migration("20260921120000_AddUniqueMainLotImageIndex")]
 public partial class AddUniqueMainLotImageIndex : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)

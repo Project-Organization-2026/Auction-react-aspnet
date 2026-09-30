@@ -30,12 +30,19 @@ builder.Services.AddSingleton<PasswordService>();
 // Register JWT configuration
 builder.Services.Configure<JwtSettings>(
     builder.Configuration.GetSection("JwtSettings"));
+builder.Services.Configure<BlockchainSettings>(
+    builder.Configuration.GetSection("Blockchain"));
 
 var jwtSettings = builder.Configuration
     .GetSection("JwtSettings")
     .Get<JwtSettings>() ?? new JwtSettings();
 JwtSettings.Validate(jwtSettings);
 var jwtSecretKey = jwtSettings.SecretKey;
+
+var blockchainSettings = builder.Configuration
+    .GetSection("Blockchain")
+    .Get<BlockchainSettings>() ?? new BlockchainSettings();
+BlockchainSettings.Validate(blockchainSettings);
 
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
