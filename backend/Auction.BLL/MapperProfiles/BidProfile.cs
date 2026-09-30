@@ -1,6 +1,3 @@
-// TODO: Create an AutoMapper Profile for Bid <-> BidDto and CreateBidDto -> Bid.
-// Keep server-owned values (Id, UserId, PlacedAt) controlled by the service.
-
 namespace Auction.BLL.MapperProfiles;
 
 using Auction.BLL.DTOs.Bids;
@@ -12,6 +9,9 @@ public class BidProfile : Profile
     public BidProfile()
     {
         CreateMap<Bid, BidDto>();
-        CreateMap<CreateBidDto, Bid>();
+        CreateMap<CreateBidDto, Bid>()
+            .ForMember(bid => bid.Id, options => options.Ignore())
+            .ForMember(bid => bid.UserId, options => options.Ignore())
+            .ForMember(bid => bid.PlacedAt, options => options.Ignore());
     }
 }

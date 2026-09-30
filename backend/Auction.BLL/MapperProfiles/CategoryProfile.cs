@@ -9,7 +9,11 @@ public class CategoryProfile : Profile
     public CategoryProfile()
     {
         CreateMap<Category, CategoryDto>();
-        CreateMap<CreateCategoryDto, Category>();
-        CreateMap<UpdateCategoryDto, Category>();
+        CreateMap<CreateCategoryDto, Category>()
+            .ForMember(category => category.Name,
+                options => options.MapFrom(dto => dto.Name.Trim()));
+        CreateMap<UpdateCategoryDto, Category>()
+            .ForMember(category => category.Name,
+                options => options.MapFrom(dto => dto.Name.Trim()));
     }
 }

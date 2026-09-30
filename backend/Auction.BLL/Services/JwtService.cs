@@ -22,17 +22,13 @@ public class JwtService
 
     public string GetAccessToken(User user)
     {
-        JwtSettings.ValidateSecretKey(_jwtSettings.SecretKey);
         if (string.IsNullOrWhiteSpace(_jwtSettings.SecretKey))
         {
             _logger.LogError("JWT secret key is not configured.");
             throw new InvalidOperationException("JWT secret key is not configured.");
         }
 
-        if (_jwtSettings.ExpireHours <= 0)
-        {
-            throw new InvalidOperationException("JWT expiration must be greater than zero.");
-        }
+        JwtSettings.Validate(_jwtSettings);
 
         var claims = new List<Claim>
         {

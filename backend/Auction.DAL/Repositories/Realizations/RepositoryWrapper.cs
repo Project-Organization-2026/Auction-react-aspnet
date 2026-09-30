@@ -55,7 +55,7 @@ public class RepositoryWrapper : IRepositoryWrapper
             }
         }
 
-        throw new NotImplementedException(
+        throw new InvalidOperationException(
             $"Repository for entity type '{typeof(TEntity).Name}' is not found in {nameof(RepositoryWrapper)}.");
     }
 

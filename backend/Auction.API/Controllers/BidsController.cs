@@ -23,8 +23,15 @@ public class BidsController : ControllerBase
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20)
     {
-        var bids = await _bidsService.GetBidsByLotIdAsync(lotId, page, pageSize);
-        return Ok(bids);
+        try
+        {
+            var bids = await _bidsService.GetBidsByLotIdAsync(lotId, page, pageSize);
+            return Ok(bids);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ex.Message);
+        }
     }
 
     [HttpPost("bids")]
@@ -42,9 +49,13 @@ public class BidsController : ControllerBase
             var bid = await _bidsService.CreateBidAsync(dto, userId);
             return CreatedAtRoute("GetBidsByLotId", new { lotId = dto.LotId }, bid);
         }
-        catch (ArgumentException ex)
+        catch (KeyNotFoundException ex)
         {
             return NotFound(ex.Message);
+        }
+        catch (ArgumentOutOfRangeException ex)
+        {
+            return BadRequest(ex.Message);
         }
         catch (InvalidOperationException ex)
         {

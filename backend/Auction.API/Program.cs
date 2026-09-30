@@ -7,6 +7,7 @@ using Auction.DAL.Repositories.Realizations;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi;
 using System.Security.Claims;
 using System.Text;
 
@@ -23,13 +24,18 @@ builder.Services.AddScoped<BidsService>();
 builder.Services.AddScoped<LotImagesService>();
 builder.Services.AddScoped<CategoriesService>();
 builder.Services.AddScoped<UsersService>();
+builder.Services.AddScoped<AuthService>();
+builder.Services.AddSingleton<PasswordService>();
 
 // Register JWT configuration
 builder.Services.Configure<JwtSettings>(
     builder.Configuration.GetSection("JwtSettings"));
 
-var jwtSecretKey = builder.Configuration["JwtSettings:SecretKey"];
-JwtSettings.ValidateSecretKey(jwtSecretKey);
+var jwtSettings = builder.Configuration
+    .GetSection("JwtSettings")
+    .Get<JwtSettings>() ?? new JwtSettings();
+JwtSettings.Validate(jwtSettings);
+var jwtSecretKey = jwtSettings.SecretKey;
 
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -41,9 +47,9 @@ builder.Services
             ValidateAudience = true,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
-            ValidIssuer = builder.Configuration["JwtSettings:Issuer"],
-            ValidAudience = builder.Configuration["JwtSettings:Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecretKey!)),
+            ValidIssuer = jwtSettings.Issuer,
+            ValidAudience = jwtSettings.Audience,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecretKey)),
             NameClaimType = ClaimTypes.NameIdentifier,
             RoleClaimType = "role"
         };
@@ -60,8 +66,35 @@ builder.Services.AddAutoMapper(
     cfg => { },
     AppDomain.CurrentDomain.GetAssemblies());
 
+var allowedOrigins = builder.Configuration
+    .GetSection("Cors:AllowedOrigins")
+    .Get<string[]>() ?? ["http://localhost:5173"];
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("Frontend", policy =>
+    {
+        policy.WithOrigins(allowedOrigins)
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
+
 // Add Swagger documentation
-builder.Services.AddSwaggerGen(cfg => { });
+builder.Services.AddSwaggerGen(options =>
+{
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        Description = "Enter the JWT access token."
+    });
+    options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+    {
+        [new OpenApiSecuritySchemeReference("Bearer", document, null)] = []
+    });
+});
 
 // Configure PostgreSQL database
 builder.Services.AddDbContext<AuctionDbContext>(options =>
@@ -92,9 +125,16 @@ if (app.Environment.IsDevelopment())
 }
 
 // Configure HTTP request pipeline
+app.UseHttpsRedirection();
+app.UseCors("Frontend");
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapGet("/api/health", () => Results.Ok(new
+{
+    status = "Healthy",
+    timestamp = DateTime.UtcNow
+})).AllowAnonymous();
 
 app.Run();

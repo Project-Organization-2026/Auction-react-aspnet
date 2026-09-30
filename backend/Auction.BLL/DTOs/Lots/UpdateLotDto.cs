@@ -2,5 +2,4 @@
 
 public class UpdateLotDto : CreateLotDto
 {
-    public decimal CurrentPrice { get; set; }
 }

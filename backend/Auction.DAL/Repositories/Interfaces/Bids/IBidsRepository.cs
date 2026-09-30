@@ -5,6 +5,8 @@ namespace Auction.DAL.Repositories.Interfaces.Bids;
 
 public interface IBidsRepository : IRepositoryBase<Bid>
 {
+    Task<Bid?> GetHighestByLotIdAsync(int lotId);
+
     Task<(IReadOnlyList<Bid> Items, int TotalCount)> GetByLotIdAsync(
         int lotId,
         int page,

@@ -1,11 +1,13 @@
-// TODO: Add the request DTO for creating a bid.
-// Suggested fields: LotId and Amount. Do not accept UserId from the request body;
-// the authenticated user's id must come from the claims in BidsController.
-
 namespace Auction.BLL.DTOs.Bids;
 
 public class CreateBidDto
 {
+    [System.ComponentModel.DataAnnotations.Range(1, int.MaxValue)]
     public int LotId { get; set; }
+
+    [System.ComponentModel.DataAnnotations.Range(
+        typeof(decimal),
+        "0.01",
+        "9999999999999999.99")]
     public decimal Amount { get; set; }
 }

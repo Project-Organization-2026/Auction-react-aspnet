@@ -1,3 +1,4 @@
+using Auction.BLL.DTOs.Users;
 using Auction.BLL.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -36,7 +37,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpPost("me/balance")]
-    public async Task<IActionResult> TopUpBalance([FromBody] decimal amount)
+    public async Task<IActionResult> TopUpBalance([FromBody] TopUpBalanceDto dto)
     {
         if (!TryGetUserId(out var userId))
         {
@@ -45,7 +46,7 @@ public class UsersController : ControllerBase
 
         try
         {
-            var balance = await _usersService.TopUpBalanceAsync(userId, amount);
+            var balance = await _usersService.TopUpBalanceAsync(userId, dto.Amount);
             return Ok(new { balance });
         }
         catch (ArgumentOutOfRangeException ex)
@@ -55,6 +56,29 @@ public class UsersController : ControllerBase
         catch (KeyNotFoundException ex)
         {
             return NotFound(ex.Message);
+        }
+    }
+
+    [HttpPut("me")]
+    public async Task<IActionResult> UpdateCurrentUserProfile(
+        [FromBody] UpdateUserProfileDto dto)
+    {
+        if (!TryGetUserId(out var userId))
+        {
+            return Unauthorized("User ID claim is missing or invalid.");
+        }
+
+        try
+        {
+            return Ok(await _usersService.UpdateProfileAsync(userId, dto));
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ex.Message);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
         }
     }
 

@@ -14,6 +14,6 @@ public class UserProfile : Profile
             .ForMember(user => user.UserName,
                 options => options.MapFrom(dto => dto.UserName.Trim()))
             .ForMember(user => user.Email,
-                options => options.MapFrom(dto => dto.Email.Trim()));
+                options => options.MapFrom(dto => dto.Email.Trim().ToLowerInvariant()));
     }
 }

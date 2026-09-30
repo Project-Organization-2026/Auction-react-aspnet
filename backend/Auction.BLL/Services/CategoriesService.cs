@@ -43,6 +43,7 @@ public class CategoriesService
     public async Task<CategoryDto> CreateCategoryAsync(CreateCategoryDto dto)
     {
         ValidateName(dto.Name);
+        await EnsureNameAvailableAsync(dto.Name, null);
 
         var category = _mapper.Map<Category>(dto);
         await _repositoryWrapper.CategoriesRepository.CreateAsync(category);
@@ -60,6 +61,8 @@ public class CategoriesService
         {
             throw new KeyNotFoundException($"Category with ID {id} not found.");
         }
+
+        await EnsureNameAvailableAsync(dto.Name, id);
 
         _mapper.Map(dto, category);
         await _repositoryWrapper.SaveChangesAsync();
@@ -89,11 +92,35 @@ public class CategoriesService
             });
     }
 
+    private async Task EnsureNameAvailableAsync(string name, int? currentCategoryId)
+    {
+        var normalizedName = name.Trim().ToLower();
+        var exists = await _repositoryWrapper.CategoriesRepository.AnyAsync(
+            new QueryOptions<Category>
+            {
+                Filter = category =>
+                    category.Name.ToLower() == normalizedName &&
+                    (!currentCategoryId.HasValue || category.Id != currentCategoryId.Value),
+                AsNoTracking = true
+            });
+
+        if (exists)
+        {
+            throw new InvalidOperationException(
+                "A category with this name already exists.");
+        }
+    }
+
     private static void ValidateName(string? name)
     {
         if (string.IsNullOrWhiteSpace(name))
         {
             throw new ArgumentException("Category name is required.");
+        }
+
+        if (name.Trim().Length > 256)
+        {
+            throw new ArgumentException("Category name cannot exceed 256 characters.");
         }
     }
 }

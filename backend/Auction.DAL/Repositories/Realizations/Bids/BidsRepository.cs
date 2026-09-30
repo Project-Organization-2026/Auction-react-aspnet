@@ -15,6 +15,16 @@ public class BidsRepository : RepositoryBase<Bid>, IBidsRepository
         _context = context;
     }
 
+    public Task<Bid?> GetHighestByLotIdAsync(int lotId)
+    {
+        return _context.Bids
+            .AsNoTracking()
+            .Where(bid => bid.LotId == lotId)
+            .OrderByDescending(bid => bid.Amount)
+            .ThenByDescending(bid => bid.Id)
+            .FirstOrDefaultAsync();
+    }
+
     /// <summary>Returns a stable newest-first page, using the ID to break timestamp ties.</summary>
     public async Task<(IReadOnlyList<Bid> Items, int TotalCount)> GetByLotIdAsync(
         int lotId,
