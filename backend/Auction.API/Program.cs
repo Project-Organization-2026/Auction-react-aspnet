@@ -21,6 +21,7 @@ builder.Services.AddScoped<LotsService>();
 builder.Services.AddScoped<JwtService>();
 builder.Services.AddScoped<BidsService>();
 builder.Services.AddScoped<LotImagesService>();
+builder.Services.AddScoped<CategoriesService>();
 
 // Register JWT configuration
 builder.Services.Configure<JwtSettings>(
@@ -42,7 +43,8 @@ builder.Services
             ValidIssuer = builder.Configuration["JwtSettings:Issuer"],
             ValidAudience = builder.Configuration["JwtSettings:Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecretKey!)),
-            NameClaimType = ClaimTypes.NameIdentifier
+            NameClaimType = ClaimTypes.NameIdentifier,
+            RoleClaimType = "role"
         };
     });
 
