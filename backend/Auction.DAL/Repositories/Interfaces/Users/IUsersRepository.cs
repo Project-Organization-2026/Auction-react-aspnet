@@ -5,6 +5,8 @@ namespace Auction.DAL.Repositories.Interfaces.Users;
 
 public interface IUsersRepository : IRepositoryBase<User>
 {
+    Task<User?> GetProfileByIdAsync(int userId);
+    Task<User?> GetForUpdateAsync(int userId);
     Task<User?> GetByEmailAsync(string email);
     Task<User?> GetByUserNameAsync(string userName);
     Task<bool> ExistsByEmailAsync(string email);

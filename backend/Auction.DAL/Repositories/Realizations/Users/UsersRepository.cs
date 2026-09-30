@@ -3,13 +3,46 @@ using Auction.DAL.Entities;
 using Auction.DAL.Repositories.Realizations.Base;
 using Auction.DAL.Repositories.Interfaces.Users;
 using Auction.DAL.Repositories.Options;
+using Microsoft.EntityFrameworkCore;
 
 namespace Auction.DAL.Repositories.Realizations.Users;
 
 public class UsersRepository : RepositoryBase<User>, IUsersRepository
 {
+    private readonly AuctionDbContext _context;
+
     public UsersRepository(AuctionDbContext context) : base(context)
     {
+        _context = context;
+    }
+
+    public Task<User?> GetProfileByIdAsync(int userId)
+    {
+        return _context.Users
+            .AsNoTracking()
+            .AsSplitQuery()
+            .Include(user => user.CreatedLots)
+                .ThenInclude(lot => lot.Seller)
+            .Include(user => user.CreatedLots)
+                .ThenInclude(lot => lot.Winner)
+            .Include(user => user.CreatedLots)
+                .ThenInclude(lot => lot.Category)
+            .Include(user => user.CreatedLots)
+                .ThenInclude(lot => lot.Images)
+            .SingleOrDefaultAsync(user => user.Id == userId);
+    }
+
+    public Task<User?> GetForUpdateAsync(int userId)
+    {
+        if (_context.Database.CurrentTransaction is null)
+        {
+            throw new InvalidOperationException("A transaction is required to lock a user.");
+        }
+
+        return _context.Users
+            .FromSqlInterpolated($"SELECT * FROM \"Users\" WHERE \"Id\" = {userId} FOR UPDATE")
+            .AsTracking()
+            .SingleOrDefaultAsync();
     }
 
     public Task<User?> GetByEmailAsync(string email)

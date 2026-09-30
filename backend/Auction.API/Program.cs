@@ -22,6 +22,7 @@ builder.Services.AddScoped<JwtService>();
 builder.Services.AddScoped<BidsService>();
 builder.Services.AddScoped<LotImagesService>();
 builder.Services.AddScoped<CategoriesService>();
+builder.Services.AddScoped<UsersService>();
 
 // Register JWT configuration
 builder.Services.Configure<JwtSettings>(
