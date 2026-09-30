@@ -20,6 +20,7 @@ builder.Services.AddScoped<IRepositoryWrapper, RepositoryWrapper>();
 builder.Services.AddScoped<LotsService>();
 builder.Services.AddScoped<JwtService>();
 builder.Services.AddScoped<BidsService>();
+builder.Services.AddScoped<LotImagesService>();
 
 // Register JWT configuration
 builder.Services.Configure<JwtSettings>(

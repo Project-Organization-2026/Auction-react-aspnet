@@ -77,6 +77,14 @@ public class AuctionDbContext : DbContext
             entity.Property(e => e.Id).ValueGeneratedOnAdd();
             entity.Property(e => e.Url).IsRequired();
 
+            // Keep the regular LotId index for loading all images, and add a separate
+            // filtered unique index as a database safeguard for the main image.
+            entity.HasIndex(e => e.LotId);
+            entity.HasIndex(e => e.LotId)
+                .HasDatabaseName("IX_LotImages_LotId_IsMain")
+                .IsUnique()
+                .HasFilter("\"IsMain\" = TRUE");
+
             entity.HasOne(e => e.Lot)
                 .WithMany(l => l.Images)
                 .HasForeignKey(e => e.LotId)
