@@ -1,3 +1,4 @@
+using Auction.API.Filters;
 using Auction.BLL.Services;
 using Auction.BLL.Settings;
 using Auction.DAL.Data;
@@ -60,6 +61,24 @@ builder.Services
             NameClaimType = ClaimTypes.NameIdentifier,
             RoleClaimType = "role"
         };
+        options.Events = new JwtBearerEvents
+        {
+            OnChallenge = async context =>
+            {
+                context.HandleResponse();
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                context.Response.ContentType = "application/json";
+                await context.Response.WriteAsJsonAsync(
+                    ServiceResponse.Error("Authentication is required."));
+            },
+            OnForbidden = async context =>
+            {
+                context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                context.Response.ContentType = "application/json";
+                await context.Response.WriteAsJsonAsync(
+                    ServiceResponse.Error("Access is forbidden."));
+            }
+        };
     });
 
 // Configure logging
@@ -68,7 +87,31 @@ builder.Logging.AddConsole();
 builder.Logging.AddDebug();
 
 // Add controllers and API services
-builder.Services.AddControllers();
+builder.Services
+    .AddControllers(options =>
+    {
+        options.Filters.Add<ServiceResponseResultFilter>();
+    })
+    .ConfigureApiBehaviorOptions(options =>
+    {
+        options.InvalidModelStateResponseFactory = context =>
+        {
+            var errors = context.ModelState
+                .Where(entry => entry.Value?.Errors.Count > 0)
+                .ToDictionary(
+                    entry => entry.Key,
+                    entry => entry.Value!.Errors
+                        .Select(error => string.IsNullOrWhiteSpace(error.ErrorMessage)
+                            ? "The supplied value is invalid."
+                            : error.ErrorMessage)
+                        .ToArray());
+
+            return new BadRequestObjectResult(
+                ServiceResponse.Error(
+                    "Request validation failed.",
+                    new { errors }));
+        };
+    });
 builder.Services.AddAutoMapper(
     cfg => { },
     AppDomain.CurrentDomain.GetAssemblies());
@@ -120,6 +163,15 @@ builder.Services.AddDbContext<AuctionDbContext>(options =>
 
 var app = builder.Build();
 app.UseMiddleware<Auction.API.Middleware.ExceptionHandlingMiddleware>();
+app.UseStatusCodePages(async statusContext =>
+{
+    var response = statusContext.HttpContext.Response;
+    response.ContentType = "application/json";
+    await response.WriteAsJsonAsync(
+        ServiceResponse.Error(
+            ServiceResponseResultFilter.GetDefaultErrorMessage(
+                response.StatusCode)));
+});
 
 // Seed initial development data
 await app.SeedDatabaseAsync();
@@ -138,10 +190,11 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-app.MapGet("/api/health", () => Results.Ok(new
-{
-    status = "Healthy",
-    timestamp = DateTime.UtcNow
-})).AllowAnonymous();
+app.MapGet("/api/health", () => Results.Ok(
+    ServiceResponse.Success("API is healthy.", new
+    {
+        status = "Healthy",
+        timestamp = DateTime.UtcNow
+    }))).AllowAnonymous();
 
 app.Run();

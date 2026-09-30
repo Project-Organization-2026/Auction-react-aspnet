@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+using Auction.BLL.Services;
 using System.ComponentModel.DataAnnotations;
 using System.Net;
 
@@ -28,7 +28,7 @@ public class ExceptionHandlingMiddleware
         }
         catch (Exception exception)
         {
-            var (statusCode, title) = GetErrorDetails(exception);
+            var statusCode = GetStatusCode(exception);
 
             if (statusCode >= StatusCodes.Status500InternalServerError)
             {
@@ -42,50 +42,38 @@ public class ExceptionHandlingMiddleware
                     statusCode);
             }
 
-            await WriteResponseAsync(context, exception, statusCode, title);
+            await WriteResponseAsync(context, exception, statusCode);
         }
     }
 
     private async Task WriteResponseAsync(
         HttpContext context,
         Exception exception,
-        int statusCode,
-        string title)
+        int statusCode)
     {
-        var response = new ProblemDetails
+        var message = statusCode < StatusCodes.Status500InternalServerError ||
+                      _environment.IsDevelopment()
+            ? exception.Message
+            : "An unexpected server error occurred.";
+        var response = ServiceResponse.Error(message, new
         {
-            Status = statusCode,
-            Title = title,
-            Detail = statusCode < StatusCodes.Status500InternalServerError ||
-                     _environment.IsDevelopment()
-                ? exception.Message
-                : "An unexpected server error occurred.",
-            Instance = context.Request.Path
-        };
-        response.Extensions["traceId"] = context.TraceIdentifier;
+            traceId = context.TraceIdentifier
+        });
 
         context.Response.StatusCode = statusCode;
-        context.Response.ContentType = "application/problem+json";
+        context.Response.ContentType = "application/json";
         await context.Response.WriteAsJsonAsync(response, context.RequestAborted);
     }
 
-    private static (int StatusCode, string Title) GetErrorDetails(Exception exception)
+    private static int GetStatusCode(Exception exception)
     {
         return exception switch
         {
-            KeyNotFoundException => (
-                StatusCodes.Status404NotFound,
-                "Resource not found"),
-            UnauthorizedAccessException => (
-                StatusCodes.Status403Forbidden,
-                "Access forbidden"),
-            ValidationException or ArgumentException => (
-                StatusCodes.Status400BadRequest,
-                "Invalid request"),
-            InvalidOperationException => (
-                StatusCodes.Status409Conflict,
-                "Operation conflict"),
-            _ => ((int)HttpStatusCode.InternalServerError, "Server error")
+            KeyNotFoundException => StatusCodes.Status404NotFound,
+            UnauthorizedAccessException => StatusCodes.Status403Forbidden,
+            ValidationException or ArgumentException => StatusCodes.Status400BadRequest,
+            InvalidOperationException => StatusCodes.Status409Conflict,
+            _ => (int)HttpStatusCode.InternalServerError
         };
     }
 }
