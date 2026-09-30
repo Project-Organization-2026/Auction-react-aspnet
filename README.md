@@ -45,6 +45,19 @@ These credentials are development-only and must not be used in production.
 
 ## Main API endpoints
 
+Every JSON endpoint uses the same response envelope:
+
+```json
+{
+  "isSuccess": true,
+  "message": "Request completed successfully.",
+  "payload": {}
+}
+```
+
+Errors use the same shape with `isSuccess: false`. Validation details and the
+trace ID for server errors are returned inside `payload`.
+
 ### Authentication
 
 - `POST /api/auth/register`

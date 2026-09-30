@@ -72,15 +72,15 @@ public sealed class ServiceResponseResultFilter : IAsyncAlwaysRunResultFilter
     {
         if (statusCode is >= 200 and < 300)
         {
-            var message = statusCode == StatusCodes.Status201Created
+            var successMessage = statusCode == StatusCodes.Status201Created
                 ? "Resource created successfully."
                 : "Request completed successfully.";
-            return ServiceResponse.Success(message, value);
+            return ServiceResponse.Success(successMessage, value);
         }
 
-        if (value is string message)
+        if (value is string errorMessage)
         {
-            return ServiceResponse.Error(message);
+            return ServiceResponse.Error(errorMessage);
         }
 
         return ServiceResponse.Error(GetDefaultErrorMessage(statusCode), value);

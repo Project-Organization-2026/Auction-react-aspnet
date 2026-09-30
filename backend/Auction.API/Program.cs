@@ -6,6 +6,7 @@ using Auction.DAL.Extensions;
 using Auction.DAL.Repositories.Interfaces;
 using Auction.DAL.Repositories.Realizations;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
