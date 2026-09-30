@@ -30,18 +30,18 @@ dotnet restore backend/Auction.slnx
 dotnet run --project backend/Auction.API/Auction.API.csproj
 ```
 
-Database migrations are applied automatically when the API starts. Development seed data is inserted only in the Development environment.
+Database migrations are applied automatically when the API starts. Development seed data is inserted only in the Development environment. Set `DevelopmentSeed__Password` in your local `.env` to create sample users and lots; without it, only sample categories are created.
 
 Swagger is available at `/swagger` and the API health endpoint is available at `GET /api/health`.
 
 ### Development accounts
 
-Both seeded accounts use the password `Password123!`:
+When `DevelopmentSeed__Password` is configured, both seeded accounts use that password:
 
 - `user1@example.com` — regular user
 - `admin@example.com` — administrator
 
-These credentials are development-only and must not be used in production.
+These accounts are development-only and must not be used in production. Existing seeded accounts retain their old password hash; changing the environment variable does not reset them.
 
 ## Main API endpoints
 

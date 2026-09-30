@@ -27,7 +27,6 @@ builder.Services.AddScoped<LotImagesService>();
 builder.Services.AddScoped<CategoriesService>();
 builder.Services.AddScoped<UsersService>();
 builder.Services.AddScoped<AuthService>();
-builder.Services.AddSingleton<PasswordService>();
 
 // Register JWT configuration
 builder.Services.Configure<JwtSettings>(
@@ -175,7 +174,7 @@ app.UseStatusCodePages(async statusContext =>
 });
 
 // Seed initial development data
-await app.SeedDatabaseAsync();
+await app.SeedDatabaseAsync(PasswordService.HashPassword);
 
 // Enable Swagger only in development
 if (app.Environment.IsDevelopment())

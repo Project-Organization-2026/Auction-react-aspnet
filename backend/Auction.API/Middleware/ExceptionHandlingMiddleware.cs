@@ -42,6 +42,11 @@ public class ExceptionHandlingMiddleware
                     statusCode);
             }
 
+            if (context.Response.HasStarted)
+            {
+                throw;
+            }
+
             await WriteResponseAsync(context, exception, statusCode);
         }
     }

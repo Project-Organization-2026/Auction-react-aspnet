@@ -2,14 +2,14 @@ using System.Security.Cryptography;
 
 namespace Auction.BLL.Services;
 
-public class PasswordService
+public static class PasswordService
 {
     private const int SaltSize = 16;
     private const int HashSize = 32;
     private const int Iterations = 100_000;
     private const string Algorithm = "pbkdf2-sha256";
 
-    public string HashPassword(string password)
+    public static string HashPassword(string password)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(password);
 
@@ -29,7 +29,7 @@ public class PasswordService
             Convert.ToBase64String(hash));
     }
 
-    public bool VerifyPassword(string password, string passwordHash)
+    public static bool VerifyPassword(string password, string passwordHash)
     {
         if (string.IsNullOrEmpty(password) || string.IsNullOrEmpty(passwordHash))
         {

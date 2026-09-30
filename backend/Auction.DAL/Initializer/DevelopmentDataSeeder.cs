@@ -7,14 +7,17 @@ namespace Auction.DAL.Initializer;
 
 public static class DevelopmentDataSeeder
 {
-    public static async Task SeedAsync(AuctionDbContext context)
+    public static async Task SeedAsync(AuctionDbContext context, string? passwordHash)
     {
         await SeedCategoriesAsync(context);
-        await SeedUsersAsync(context);
-        await SeedLotsAsync(context);
+        if (passwordHash is not null)
+        {
+            await SeedUsersAsync(context, passwordHash);
+            await SeedLotsAsync(context);
+        }
     }
 
-    public static async Task SeedUsersAsync(AuctionDbContext context)
+    public static async Task SeedUsersAsync(AuctionDbContext context, string passwordHash)
     {
         var usersToSeed = new List<User>
         {
@@ -22,8 +25,7 @@ public static class DevelopmentDataSeeder
             {
                 UserName = "user1",
                 Email = "user1@example.com",
-                // Development-only password: Password123!
-                PasswordHash = "pbkdf2-sha256$100000$kqIPGJUj55cZ5hdMpq0ciA==$SeGcoqyDh2T1M3L2TousUQZSRid9FnQzavEKjSvij2M=",
+                PasswordHash = passwordHash,
                 Role = UserRole.User,
                 Balance = 1000.00m,
                 CreatedAt = DateTime.UtcNow
@@ -32,8 +34,7 @@ public static class DevelopmentDataSeeder
             {
                 UserName = "admin",
                 Email = "admin@example.com",
-                // Development-only password: Password123!
-                PasswordHash = "pbkdf2-sha256$100000$kqIPGJUj55cZ5hdMpq0ciA==$SeGcoqyDh2T1M3L2TousUQZSRid9FnQzavEKjSvij2M=",
+                PasswordHash = passwordHash,
                 Role = UserRole.Admin,
                 Balance = 1000.00m,
                 CreatedAt = DateTime.UtcNow

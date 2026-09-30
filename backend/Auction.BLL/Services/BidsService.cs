@@ -57,7 +57,7 @@ public class BidsService
         if (dto.Amount <= 0 || dto.Amount > MaximumStoredAmount)
         {
             throw new ArgumentOutOfRangeException(
-                nameof(dto.Amount),
+                nameof(dto),
                 $"Bid amount must be between 0.01 and {MaximumStoredAmount}.");
         }
 

@@ -14,18 +14,15 @@ public class AuthService
 {
     private readonly IRepositoryWrapper _repositoryWrapper;
     private readonly JwtService _jwtService;
-    private readonly PasswordService _passwordService;
     private readonly IMapper _mapper;
 
     public AuthService(
         IRepositoryWrapper repositoryWrapper,
         JwtService jwtService,
-        PasswordService passwordService,
         IMapper mapper)
     {
         _repositoryWrapper = repositoryWrapper;
         _jwtService = jwtService;
-        _passwordService = passwordService;
         _mapper = mapper;
     }
 
@@ -50,7 +47,7 @@ public class AuthService
         {
             UserName = userName,
             Email = email,
-            PasswordHash = _passwordService.HashPassword(dto.Password),
+            PasswordHash = PasswordService.HashPassword(dto.Password),
             Role = UserRole.User,
             CreatedAt = DateTime.UtcNow
         };
@@ -86,7 +83,7 @@ public class AuthService
             .GetByEmailAsync(NormalizeEmail(dto.Email));
 
         if (user is null ||
-            !_passwordService.VerifyPassword(dto.Password, user.PasswordHash))
+            !PasswordService.VerifyPassword(dto.Password, user.PasswordHash))
         {
             throw new UnauthorizedAccessException("Invalid email or password.");
         }

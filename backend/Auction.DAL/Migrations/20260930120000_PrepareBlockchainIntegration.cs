@@ -10,6 +10,9 @@ namespace Auction.DAL.Migrations;
 [Migration("20260930120000_PrepareBlockchainIntegration")]
 public partial class PrepareBlockchainIntegration : Migration
 {
+    private static readonly string[] LotBlockchainIdentityColumns =
+        ["ContractAddress", "OnChainAuctionId"];
+
     protected override void Up(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.AddColumn<string>(
@@ -96,7 +99,7 @@ public partial class PrepareBlockchainIntegration : Migration
         migrationBuilder.CreateIndex(
             name: "IX_Lots_ContractAddress_OnChainAuctionId",
             table: "Lots",
-            columns: new[] { "ContractAddress", "OnChainAuctionId" },
+            columns: LotBlockchainIdentityColumns,
             unique: true,
             filter: "\"ContractAddress\" IS NOT NULL AND \"OnChainAuctionId\" IS NOT NULL");
 

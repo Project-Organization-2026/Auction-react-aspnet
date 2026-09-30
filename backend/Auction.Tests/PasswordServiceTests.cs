@@ -5,23 +5,22 @@ namespace Auction.Tests;
 
 public class PasswordServiceTests
 {
-    private readonly PasswordService _service = new();
 
     [Fact]
     public void HashAndVerify_WithCorrectPassword_Succeeds()
     {
-        var hash = _service.HashPassword("Password123!");
+        var hash = PasswordService.HashPassword("Password123!");
 
         Assert.NotEqual("Password123!", hash);
-        Assert.True(_service.VerifyPassword("Password123!", hash));
+        Assert.True(PasswordService.VerifyPassword("Password123!", hash));
     }
 
     [Fact]
     public void Verify_WithWrongPassword_Fails()
     {
-        var hash = _service.HashPassword("Password123!");
+        var hash = PasswordService.HashPassword("Password123!");
 
-        Assert.False(_service.VerifyPassword("wrong-password", hash));
+        Assert.False(PasswordService.VerifyPassword("wrong-password", hash));
     }
 
     [Theory]
@@ -30,6 +29,6 @@ public class PasswordServiceTests
     [InlineData("pbkdf2-sha256$invalid$salt$hash")]
     public void Verify_WithMalformedHash_Fails(string hash)
     {
-        Assert.False(_service.VerifyPassword("Password123!", hash));
+        Assert.False(PasswordService.VerifyPassword("Password123!", hash));
     }
 }

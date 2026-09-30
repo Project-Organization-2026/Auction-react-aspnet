@@ -17,7 +17,6 @@ public class AuthServiceTests
 {
     private readonly Mock<IRepositoryWrapper> _wrapper = new();
     private readonly Mock<IUsersRepository> _users = new();
-    private readonly PasswordService _passwordService = new();
     private readonly AuthService _service;
 
     public AuthServiceTests()
@@ -48,7 +47,6 @@ public class AuthServiceTests
         _service = new AuthService(
             _wrapper.Object,
             jwtService,
-            _passwordService,
             mapper.Object);
     }
 
@@ -70,7 +68,7 @@ public class AuthServiceTests
         Assert.NotNull(createdUser);
         Assert.Equal("test-user", createdUser.UserName);
         Assert.Equal("test@example.com", createdUser.Email);
-        Assert.True(_passwordService.VerifyPassword(
+        Assert.True(PasswordService.VerifyPassword(
             "Password123!",
             createdUser.PasswordHash));
         Assert.False(string.IsNullOrWhiteSpace(result.AccessToken));
@@ -102,7 +100,7 @@ public class AuthServiceTests
                 Id = 1,
                 UserName = "test-user",
                 Email = "test@example.com",
-                PasswordHash = _passwordService.HashPassword("Password123!")
+                PasswordHash = PasswordService.HashPassword("Password123!")
             });
 
         var result = await _service.LoginAsync(new LoginDto
@@ -122,7 +120,7 @@ public class AuthServiceTests
             .ReturnsAsync(new User
             {
                 Email = "test@example.com",
-                PasswordHash = _passwordService.HashPassword("Password123!")
+                PasswordHash = PasswordService.HashPassword("Password123!")
             });
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
