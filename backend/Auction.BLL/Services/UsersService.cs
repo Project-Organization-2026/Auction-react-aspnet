@@ -82,6 +82,13 @@ public class UsersService
             throw new KeyNotFoundException($"User with ID {userId} not found.");
         }
 
+        if (user.Balance > decimal.MaxValue - amount)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(amount),
+                "Top-up amount exceeds the supported balance range.");
+        }
+
         user.Balance += amount;
         await _repositoryWrapper.SaveChangesAsync();
         await transaction.CommitAsync();
