@@ -14,6 +14,7 @@ function AuctionCard({ lot }) {
       <div className="auction-card__price-label">Current price</div>
       <div className="auction-card__price"><strong>{price(lot.currentPrice)}</strong></div>
       <div className="auction-card__end">{lot.status === 2 ? "Ended" : "Ends"} {dateLabel}</div>
+      {lot.status === 1 && <button className="auction-card__bid-button" type="button" disabled>Place Bid</button>}
     </div>
   </article>;
 }

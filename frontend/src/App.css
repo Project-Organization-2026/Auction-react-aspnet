@@ -285,6 +285,17 @@
   font-size: 13px;
 }
 
+.auction-card__bid-button {
+  width: 100%;
+  min-height: 54px;
+  border: 0;
+  border-radius: 14px;
+  background: #000;
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+}
+
 .catalog-message {
   min-height: 260px;
   display: flex;
