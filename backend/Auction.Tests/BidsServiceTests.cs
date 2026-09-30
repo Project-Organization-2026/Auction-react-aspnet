@@ -68,6 +68,25 @@ public class BidsServiceTests
     }
 
     [Fact]
+    public async Task CreateBid_ForBlockchainLot_DoesNotUseDatabaseBalanceFlow()
+    {
+        var lot = CreateActiveLot(sellerId: 5);
+        lot.SettlementMode = AuctionSettlementMode.Blockchain;
+        _lots.Setup(item => item.GetForUpdateAsync(1)).ReturnsAsync(lot);
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _service.CreateBidAsync(
+                new CreateBidDto { LotId = 1, Amount = 120 },
+                2));
+
+        Assert.Contains("smart contract", exception.Message);
+        _users.Verify(
+            item => item.GetForUpdateAsync(It.IsAny<int>()),
+            Times.Never);
+        _wrapper.Verify(item => item.SaveChangesAsync(), Times.Never);
+    }
+
+    [Fact]
     public async Task CreateBid_WithInsufficientBalance_IsRejected()
     {
         _lots.Setup(item => item.GetForUpdateAsync(1))
