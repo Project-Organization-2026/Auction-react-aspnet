@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import "./App.css";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import Header from "./components/Header";
@@ -10,7 +10,13 @@ import { testAuctions as initialLots } from "./data/testAuctions";
 
 const loadPrices = () => {
   try {
-    return JSON.parse(localStorage.getItem("bidPrices") ?? "{}");
+    const parsed = JSON.parse(localStorage.getItem("bidPrices") ?? "{}");
+    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return {};
+    }
+    return Object.fromEntries(
+      Object.entries(parsed).filter(([, value]) => Number.isFinite(value)),
+    );
   } catch {
     return {};
   }
@@ -28,12 +34,16 @@ function App() {
   );
 
   const placeBid = (id, value) => {
-    setPrices((prev) => {
-      const next = { ...prev, [id]: value };
-      localStorage.setItem("bidPrices", JSON.stringify(next));
-      return next;
-    });
+    setPrices((prev) => ({ ...prev, [id]: value }));
   };
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("bidPrices", JSON.stringify(prices));
+    } catch {
+      // Storage full or disabled: in-memory prices still work for this session.
+    }
+  }, [prices]);
 
   return (
     <BrowserRouter>
