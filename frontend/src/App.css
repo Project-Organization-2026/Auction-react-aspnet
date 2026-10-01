@@ -230,6 +230,7 @@
   border-radius: 7px;
   background: #f2f2f2;
   aspect-ratio: .8;
+  text-decoration: none;
 }
 
 .auction-card__image-wrap img {
@@ -286,14 +287,142 @@
 }
 
 .auction-card__bid-button {
+  display: grid;
+  place-items: center;
   width: 100%;
   min-height: 54px;
+  border-radius: 14px;
+  background: #000;
+  color: #fff;
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.auction-card__content h3 a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.auction-card__content h3 a:hover {
+  color: var(--blue);
+  text-decoration: underline;
+}
+
+.lot-back {
+  display: inline-block;
+  margin-top: 34px;
+  color: var(--blue);
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.lot-details {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  gap: 48px;
+  padding: 24px 0 8px;
+}
+
+.lot-gallery {
+  overflow: hidden;
+  border-radius: 10px;
+  background: #f2f2f2;
+  aspect-ratio: .8;
+}
+
+.lot-gallery img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.lot-gallery__no-image {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  color: #999;
+}
+
+.bid-panel__category {
+  color: #737980;
+  font-size: 13px;
+}
+
+.bid-panel h1 {
+  margin: 8px 0 0;
+  font-size: clamp(30px, 3.4vw, 42px);
+  letter-spacing: -.03em;
+  line-height: 1.12;
+}
+
+.bid-panel__price-label {
+  margin-top: 18px;
+  color: #737980;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.bid-panel__price {
+  margin-top: 4px;
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.bid-panel__end {
+  margin-top: 10px;
+  color: #737980;
+  font-size: 13px;
+}
+
+.bid-panel form {
+  margin-top: 18px;
+}
+
+.bid-panel label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.bid-panel input {
+  width: 100%;
+  min-height: 54px;
+  padding: 0 14px;
+  border: 1px solid #d2d2d2;
+  border-radius: 14px;
+  box-sizing: border-box;
+  font: inherit;
+  font-size: 16px;
+}
+
+.bid-panel button {
+  width: 100%;
+  min-height: 54px;
+  margin-top: 10px;
   border: 0;
   border-radius: 14px;
   background: #000;
   color: #fff;
   font: inherit;
   font-size: 14px;
+  cursor: pointer;
+}
+
+.bid-panel [role="alert"] {
+  color: #b00020;
+  font-size: 13px;
+}
+
+.lot-description {
+  max-width: 760px;
+  padding: 20px 0 90px;
+  color: #333;
+  line-height: 1.65;
 }
 
 .catalog-message {
@@ -354,6 +483,11 @@
   .auction-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 34px 18px;
+  }
+
+  .lot-details {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 30px;
   }
 }
 
