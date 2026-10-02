@@ -74,12 +74,12 @@ public class LotImagesServiceTests
 
         var result = await _service.AddImageToLotAsync(
             1,
-            new AddLotImageDto { Url = "new", IsMain = true },
+            new AddLotImageDto { Url = "https://example.com/new.jpg", IsMain = true },
             10);
 
         Assert.False(previous.IsMain);
         Assert.Equal(1, result.LotId);
-        Assert.Equal("new", result.Url);
+        Assert.Equal("https://example.com/new.jpg", result.Url);
         _transaction.Verify(item => item.CommitAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -90,7 +90,10 @@ public class LotImagesServiceTests
             .ReturnsAsync(new Lot { Id = 1, SellerId = 20 });
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
-            _service.AddImageToLotAsync(1, new AddLotImageDto { Url = "image" }, 10));
+            _service.AddImageToLotAsync(
+                1,
+                new AddLotImageDto { Url = "https://example.com/image.jpg" },
+                10));
     }
 
     [Fact]

@@ -1,90 +1,158 @@
-﻿﻿using Auction.BLL.DTOs.Lots;
+using Auction.BLL.DTOs.Lots;
 using Auction.BLL.Services;
+using Auction.DAL.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Auction.API.Controllers
+namespace Auction.API.Controllers;
+
+[ApiController]
+[Route("api/lots")]
+public class LotsController : AuctionControllerBase
 {
-    [ApiController]
-    [Route("[controller]")]
-    [Authorize]
-    public class LotsController : ControllerBase
+    private readonly LotsService _lotsService;
+
+    public LotsController(LotsService lotsService)
     {
-        private readonly LotsService _lotsService;
+        _lotsService = lotsService;
+    }
 
-        public LotsController(LotsService lotsService)
+    [HttpGet]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetAllLots(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        [FromQuery] string? search = null,
+        [FromQuery] int? categoryId = null,
+        [FromQuery] LotStatus? status = null)
+    {
+        return Ok(await _lotsService.GetAllAsync(
+            page,
+            pageSize,
+            search,
+            categoryId,
+            status));
+    }
+
+    [HttpGet("{id:int}", Name = nameof(GetLotById))]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetLotById([FromRoute] int id)
+    {
+        try
         {
-            _lotsService = lotsService;
+            return Ok(await _lotsService.GetByIdAsync(id));
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ex.Message);
+        }
+    }
+
+    [HttpPost]
+    [Authorize]
+    public async Task<IActionResult> CreateLot([FromBody] CreateLotDto dto)
+    {
+        if (!TryGetUserId(out var userId))
+        {
+            return Unauthorized("User ID claim is missing or invalid.");
         }
 
-        [HttpGet]
-        public async Task<IActionResult> GetAllLots()
+        try
         {
-            var lots = await _lotsService.GetAllAsync();
-            return Ok(lots);
+            var lot = await _lotsService.CreateLotAsync(dto, userId);
+            return CreatedAtRoute(nameof(GetLotById), new { id = lot.Id }, lot);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ex.Message);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
+    [HttpPut("{id:int}")]
+    [Authorize]
+    public async Task<IActionResult> UpdateLot(
+        [FromRoute] int id,
+        [FromBody] UpdateLotDto dto)
+    {
+        if (!TryGetUserId(out var userId))
+        {
+            return Unauthorized("User ID claim is missing or invalid.");
         }
 
-        [HttpPut("{id:int}")]
-        public async Task<IActionResult> UpdateLot(
-            [FromRoute] int id,
-            [FromBody] UpdateLotDto updateLotDto)
+        try
         {
-            try
-            {
-                var updatedLot = await _lotsService.UpdateLotAsync(updateLotDto, id);
-                return Ok(updatedLot);
-            }
-            catch (ArgumentException ex)
-            {
-                return NotFound(ex.Message);
-            }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(ex.Message);
-            }
+            return Ok(await _lotsService.UpdateLotAsync(dto, id, userId));
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ex.Message);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+    }
+
+    [HttpDelete("{id:int}")]
+    [Authorize]
+    public async Task<IActionResult> DeleteLot([FromRoute] int id)
+    {
+        if (!TryGetUserId(out var userId))
+        {
+            return Unauthorized("User ID claim is missing or invalid.");
         }
 
-        [HttpDelete("{id:int}")]
-        public async Task<IActionResult> DeleteLot([FromRoute] int id)
+        try
         {
-            try
-            {
-                bool deleted = await _lotsService.DeleteLotAsync(id);
-                if (deleted)
-                {
-                    return Ok();
-                }
-                return StatusCode(500, "An error occurred while deleting the lot.");
-            }
-            catch (ArgumentException ex)
-            {
-                return NotFound(ex.Message);
-            }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(ex.Message);
-            }
+            await _lotsService.DeleteLotAsync(id, userId);
+            return NoContent();
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ex.Message);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(ex.Message);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+    }
 
+    [HttpPost("{id:int}/close")]
+    [Authorize]
+    public async Task<IActionResult> CloseLot([FromRoute] int id)
+    {
+        if (!TryGetUserId(out var userId))
+        {
+            return Unauthorized("User ID claim is missing or invalid.");
         }
 
-        [HttpPost]
-        public async Task<IActionResult> CreateLot([FromBody] CreateLotDto createLotDto)
+        try
         {
-            try
-            {
-                var createdLot = await _lotsService.CreateLotAsync(createLotDto);
-                return Ok(createdLot);
-
-            }
-            catch (ArgumentException ex)
-            {
-                return NotFound(ex.Message);
-            }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(ex.Message);
-            }
-
+            return Ok(await _lotsService.CloseLotAsync(id, userId));
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ex.Message);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(ex.Message);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
         }
     }
 }

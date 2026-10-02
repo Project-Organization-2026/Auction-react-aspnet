@@ -1,5 +1,5 @@
-﻿using System.Net;
-using System.Text.Json;
+using System.ComponentModel.DataAnnotations;
+using System.Net;
 
 namespace Auction.API.Middleware;
 
@@ -7,16 +7,16 @@ public class ExceptionHandlingMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly ILogger<ExceptionHandlingMiddleware> _logger;
+    private readonly IHostEnvironment _environment;
 
-    private static readonly JsonSerializerOptions SerializerOptions = new JsonSerializerOptions
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-    };
-
-    public ExceptionHandlingMiddleware(RequestDelegate next, ILogger<ExceptionHandlingMiddleware> logger)
+    public ExceptionHandlingMiddleware(
+        RequestDelegate next,
+        ILogger<ExceptionHandlingMiddleware> logger,
+        IHostEnvironment environment)
     {
         _next = next;
         _logger = logger;
+        _environment = environment;
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -25,28 +25,60 @@ public class ExceptionHandlingMiddleware
         {
             await _next(context);
         }
-        catch (Exception ex)
+        catch (Exception exception)
         {
-            _logger.LogError(ex, "An unhandled exception occurred.");
-            await HandleExceptionAsync(context, ex);
+            var statusCode = GetStatusCode(exception);
+
+            if (statusCode >= StatusCodes.Status500InternalServerError)
+            {
+                _logger.LogError(exception, "An unhandled exception occurred.");
+            }
+            else
+            {
+                _logger.LogWarning(
+                    exception,
+                    "Request failed with status code {StatusCode}.",
+                    statusCode);
+            }
+
+            if (context.Response.HasStarted)
+            {
+                throw;
+            }
+
+            await WriteResponseAsync(context, exception, statusCode);
         }
     }
 
-    private static Task HandleExceptionAsync(HttpContext context, Exception exception)
+    private async Task WriteResponseAsync(
+        HttpContext context,
+        Exception exception,
+        int statusCode)
     {
-        context.Response.ContentType = "application/json";
-        context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-
+        var message = statusCode < StatusCodes.Status500InternalServerError ||
+                      _environment.IsDevelopment()
+            ? exception.Message
+            : "An unexpected server error occurred.";
         var response = new
         {
-            statusCode = context.Response.StatusCode,
-            message = "Internal Server Error from the custom middleware.",
-            detailed = exception.Message
+            message,
+            traceId = context.TraceIdentifier
         };
 
-        return context.Response.WriteAsync(
-            JsonSerializer.Serialize(response, SerializerOptions),
-            context.RequestAborted
-        );
+        context.Response.StatusCode = statusCode;
+        context.Response.ContentType = "application/json";
+        await context.Response.WriteAsJsonAsync(response, context.RequestAborted);
+    }
+
+    private static int GetStatusCode(Exception exception)
+    {
+        return exception switch
+        {
+            KeyNotFoundException => StatusCodes.Status404NotFound,
+            UnauthorizedAccessException => StatusCodes.Status403Forbidden,
+            ValidationException or ArgumentException => StatusCodes.Status400BadRequest,
+            InvalidOperationException => StatusCodes.Status409Conflict,
+            _ => (int)HttpStatusCode.InternalServerError
+        };
     }
 }

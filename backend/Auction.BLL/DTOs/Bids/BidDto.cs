@@ -1,6 +1,3 @@
-// TODO: Add the response DTO for a bid.
-// Suggested fields: Id, Amount, PlacedAt, LotId, UserId (and any safe public user summary data).
-
 namespace Auction.BLL.DTOs.Bids;
 
 public class BidDto

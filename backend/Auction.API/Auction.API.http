@@ -1,6 +1,36 @@
 @Auction.API_HostAddress = http://localhost:5096
+@token = replace-with-access-token
 
-GET {{Auction.API_HostAddress}}/openapi/v1.json
+GET {{Auction.API_HostAddress}}/api/health
 Accept: application/json
 
 ###
+
+POST {{Auction.API_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "user1@example.com",
+  "password": "Password123!"
+}
+
+###
+
+GET {{Auction.API_HostAddress}}/api/lots?page=1&pageSize=20
+Accept: application/json
+
+###
+
+GET {{Auction.API_HostAddress}}/api/users/me
+Authorization: Bearer {{token}}
+Accept: application/json
+
+###
+
+POST {{Auction.API_HostAddress}}/api/users/me/balance
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "amount": 100
+}

@@ -1,8 +1,11 @@
+using Auction.BLL.Constants;
 using Auction.BLL.DTOs.Users;
 using Auction.DAL.Entities;
 using Auction.DAL.Repositories.Interfaces;
 using Auction.DAL.Repositories.Options;
 using AutoMapper;
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace Auction.BLL.Services;
 
@@ -54,14 +57,27 @@ public class UsersService
         }
 
         var userWithSameEmail = await _repositoryWrapper.UsersRepository
-            .GetByEmailAsync(dto.Email.Trim());
+            .GetByEmailAsync(dto.Email.Trim().ToLowerInvariant());
         if (userWithSameEmail is not null && userWithSameEmail.Id != userId)
         {
             throw new ArgumentException("This email is already in use.");
         }
 
         _mapper.Map(dto, user);
-        await _repositoryWrapper.SaveChangesAsync();
+        try
+        {
+            await _repositoryWrapper.SaveChangesAsync();
+        }
+        catch (DbUpdateException ex) when (
+            ex.InnerException is PostgresException
+            {
+                SqlState: PostgresErrorCodes.UniqueViolation
+            })
+        {
+            throw new ArgumentException(
+                "This email or user name is already in use.",
+                ex);
+        }
 
         return await GetProfileAsync(userId);
     }
@@ -73,6 +89,13 @@ public class UsersService
             throw new ArgumentOutOfRangeException(
                 nameof(amount),
                 "Top-up amount must be greater than zero.");
+        }
+
+        if (!MonetaryLimits.HasValidScale(amount))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(amount),
+                "Top-up amount cannot have more than two decimal places.");
         }
 
         await using var transaction = await _repositoryWrapper.BeginTransactionAsync();

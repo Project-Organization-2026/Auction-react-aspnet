@@ -2,13 +2,12 @@ using Auction.BLL.DTOs.Bids;
 using Auction.BLL.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
 
 namespace Auction.API.Controllers;
 
 [ApiController]
 [Route("api")]
-public class BidsController : ControllerBase
+public class BidsController : AuctionControllerBase
 {
     private readonly BidsService _bidsService;
 
@@ -23,16 +22,22 @@ public class BidsController : ControllerBase
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20)
     {
-        var bids = await _bidsService.GetBidsByLotIdAsync(lotId, page, pageSize);
-        return Ok(bids);
+        try
+        {
+            var bids = await _bidsService.GetBidsByLotIdAsync(lotId, page, pageSize);
+            return Ok(bids);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ex.Message);
+        }
     }
 
     [HttpPost("bids")]
     [Authorize]
     public async Task<IActionResult> CreateBid([FromBody] CreateBidDto dto)
     {
-        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-        if (userIdClaim is null || !int.TryParse(userIdClaim.Value, out var userId))
+        if (!TryGetUserId(out var userId))
         {
             return Unauthorized("User ID claim is missing or invalid.");
         }
@@ -42,9 +47,13 @@ public class BidsController : ControllerBase
             var bid = await _bidsService.CreateBidAsync(dto, userId);
             return CreatedAtRoute("GetBidsByLotId", new { lotId = dto.LotId }, bid);
         }
-        catch (ArgumentException ex)
+        catch (KeyNotFoundException ex)
         {
             return NotFound(ex.Message);
+        }
+        catch (ArgumentOutOfRangeException ex)
+        {
+            return BadRequest(ex.Message);
         }
         catch (InvalidOperationException ex)
         {

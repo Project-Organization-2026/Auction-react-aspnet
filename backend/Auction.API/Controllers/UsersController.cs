@@ -1,14 +1,14 @@
+using Auction.BLL.DTOs.Users;
 using Auction.BLL.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
 
 namespace Auction.API.Controllers;
 
 [ApiController]
 [Route("api/users")]
 [Authorize]
-public class UsersController : ControllerBase
+public class UsersController : AuctionControllerBase
 {
     private readonly UsersService _usersService;
 
@@ -36,7 +36,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpPost("me/balance")]
-    public async Task<IActionResult> TopUpBalance([FromBody] decimal amount)
+    public async Task<IActionResult> TopUpBalance([FromBody] TopUpBalanceDto dto)
     {
         if (!TryGetUserId(out var userId))
         {
@@ -45,7 +45,7 @@ public class UsersController : ControllerBase
 
         try
         {
-            var balance = await _usersService.TopUpBalanceAsync(userId, amount);
+            var balance = await _usersService.TopUpBalanceAsync(userId, dto.Amount);
             return Ok(new { balance });
         }
         catch (ArgumentOutOfRangeException ex)
@@ -58,9 +58,26 @@ public class UsersController : ControllerBase
         }
     }
 
-    private bool TryGetUserId(out int userId)
+    [HttpPut("me")]
+    public async Task<IActionResult> UpdateCurrentUserProfile(
+        [FromBody] UpdateUserProfileDto dto)
     {
-        var value = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        return int.TryParse(value, out userId);
+        if (!TryGetUserId(out var userId))
+        {
+            return Unauthorized("User ID claim is missing or invalid.");
+        }
+
+        try
+        {
+            return Ok(await _usersService.UpdateProfileAsync(userId, dto));
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ex.Message);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
     }
 }

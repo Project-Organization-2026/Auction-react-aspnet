@@ -7,23 +7,17 @@ namespace Auction.DAL.Initializer;
 
 public static class DevelopmentDataSeeder
 {
-    public static async Task SeedAsync(AuctionDbContext context)
+    public static async Task SeedAsync(AuctionDbContext context, string? passwordHash)
     {
-        if (await CheckIfDataExists(context))
-        {
-            return;
-        }
-
         await SeedCategoriesAsync(context);
-        await SeedUsersAsync(context);
-
-        await SeedLotsAsync(context);
+        if (passwordHash is not null)
+        {
+            await SeedUsersAsync(context, passwordHash);
+            await SeedLotsAsync(context);
+        }
     }
 
-    public static async Task<bool> CheckIfDataExists(AuctionDbContext context)
-        => await context.Users.AnyAsync() || await context.Categories.AnyAsync() || await context.Lots.AnyAsync();
-
-    public static async Task SeedUsersAsync(AuctionDbContext context)
+    public static async Task SeedUsersAsync(AuctionDbContext context, string passwordHash)
     {
         var usersToSeed = new List<User>
         {
@@ -31,14 +25,38 @@ public static class DevelopmentDataSeeder
             {
                 UserName = "user1",
                 Email = "user1@example.com",
-                PasswordHash = "hashedpassword1",
+                PasswordHash = passwordHash,
                 Role = UserRole.User,
                 Balance = 1000.00m,
                 CreatedAt = DateTime.UtcNow
             },
+            new User
+            {
+                UserName = "admin",
+                Email = "admin@example.com",
+                PasswordHash = passwordHash,
+                Role = UserRole.Admin,
+                Balance = 1000.00m,
+                CreatedAt = DateTime.UtcNow
+            }
         };
-        await context.Users.AddRangeAsync(usersToSeed);
-        await context.SaveChangesAsync();
+        var existingEmails = await context.Users
+            .Select(user => user.Email)
+            .ToListAsync();
+        var existingUserNames = await context.Users
+            .Select(user => user.UserName)
+            .ToListAsync();
+        var missingUsers = usersToSeed
+            .Where(user =>
+                !existingEmails.Contains(user.Email) &&
+                !existingUserNames.Contains(user.UserName))
+            .ToList();
+
+        if (missingUsers.Count != 0)
+        {
+            await context.Users.AddRangeAsync(missingUsers);
+            await context.SaveChangesAsync();
+        }
     }
 
     public static async Task SeedCategoriesAsync(AuctionDbContext context)
@@ -47,12 +65,27 @@ public static class DevelopmentDataSeeder
         {
             new Category { Name = "Electronics", Description = "Electronics category" },
         };
-        await context.Categories.AddRangeAsync(categoriesToSeed);
-        await context.SaveChangesAsync();
+        var existingNames = await context.Categories
+            .Select(category => category.Name)
+            .ToListAsync();
+        var missingCategories = categoriesToSeed
+            .Where(category => !existingNames.Contains(category.Name))
+            .ToList();
+
+        if (missingCategories.Count != 0)
+        {
+            await context.Categories.AddRangeAsync(missingCategories);
+            await context.SaveChangesAsync();
+        }
     }
 
     public static async Task SeedLotsAsync(AuctionDbContext context)
     {
+        if (await context.Lots.AnyAsync())
+        {
+            return;
+        }
+
         var defaultCategory = await context.Categories.FirstOrDefaultAsync(c => c.Name == "Electronics");
         var defaultUser = await context.Users.FirstOrDefaultAsync(u => u.UserName == "user1");
 

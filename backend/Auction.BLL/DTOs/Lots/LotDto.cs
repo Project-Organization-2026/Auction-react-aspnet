@@ -1,7 +1,6 @@
 ﻿using Auction.BLL.DTOs.Categories;
 using Auction.BLL.DTOs.LotImages;
 using Auction.BLL.DTOs.Users;
-using Auction.DAL.Entities;
 using Auction.DAL.Enums;
 
 namespace Auction.BLL.DTOs.Lots;

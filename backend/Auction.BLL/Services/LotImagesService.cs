@@ -28,13 +28,22 @@ public class LotImagesService
             throw new ValidationException("Image URL is required.");
         }
 
+        if (!Uri.TryCreate(dto.Url, UriKind.Absolute, out var imageUri) ||
+            (imageUri.Scheme != Uri.UriSchemeHttp &&
+             imageUri.Scheme != Uri.UriSchemeHttps))
+        {
+            throw new ValidationException("Image URL must be an absolute HTTP or HTTPS URL.");
+        }
+
         await using var transaction = await _repositoryWrapper.BeginTransactionAsync();
         var lot = await _repositoryWrapper.LotsRepository.GetForUpdateWithImagesAsync(lotId);
         EnsureLotOwner(lot, userId, "add images");
+        var lockedLot = lot!;
 
-        if (dto.IsMain)
+        var shouldBeMain = dto.IsMain || lockedLot.Images.Count == 0;
+        if (shouldBeMain)
         {
-            foreach (var image in lot!.Images)
+            foreach (var image in lockedLot.Images)
             {
                 image.IsMain = false;
             }
@@ -46,6 +55,7 @@ public class LotImagesService
 
         var imageToCreate = _mapper.Map<LotImage>(dto);
         imageToCreate.LotId = lotId;
+        imageToCreate.IsMain = shouldBeMain;
 
         await _repositoryWrapper.LotImagesRepository.CreateAsync(imageToCreate);
         await _repositoryWrapper.SaveChangesAsync();

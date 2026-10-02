@@ -15,6 +15,62 @@ public class LotsRepository : RepositoryBase<Lot>, ILotsRepository
         _context = context;
     }
 
+    public async Task<(IReadOnlyList<Lot> Items, int TotalCount)> GetPagedAsync(
+        int page,
+        int pageSize,
+        string? search,
+        int? categoryId,
+        Auction.DAL.Enums.LotStatus? status)
+    {
+        var query = _context.Lots.AsNoTracking();
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var term = search.Trim();
+            query = query.Where(lot =>
+                EF.Functions.ILike(lot.Title, $"%{term}%") ||
+                EF.Functions.ILike(lot.Description, $"%{term}%"));
+        }
+
+        if (categoryId.HasValue)
+        {
+            query = query.Where(lot => lot.CategoryId == categoryId.Value);
+        }
+
+        if (status.HasValue)
+        {
+            query = query.Where(lot => lot.Status == status.Value);
+        }
+
+        var totalCount = await query.CountAsync();
+        var offset = (long)(page - 1) * pageSize;
+        if (offset > int.MaxValue)
+        {
+            return (Array.Empty<Lot>(), totalCount);
+        }
+
+        var items = await AddDetails(query)
+            .OrderByDescending(lot => lot.CreatedAt)
+            .ThenByDescending(lot => lot.Id)
+            .Skip((int)offset)
+            .Take(pageSize)
+            .ToListAsync();
+
+        return (items, totalCount);
+    }
+
+    public Task<Lot?> GetDetailsByIdAsync(int lotId, bool asNoTracking = true)
+    {
+        IQueryable<Lot> query = _context.Lots;
+        if (asNoTracking)
+        {
+            query = query.AsNoTracking();
+        }
+
+        return AddDetails(query)
+            .SingleOrDefaultAsync(lot => lot.Id == lotId);
+    }
+
     /// <inheritdoc />
     public async Task<Lot?> GetForUpdateAsync(int lotId)
     {
@@ -45,18 +101,16 @@ public class LotsRepository : RepositoryBase<Lot>, ILotsRepository
             .SingleOrDefaultAsync();
     }
 
-    public async Task<IEnumerable<Lot>> GetLotsBySellerIdAsync(int sellerId)
+    private static IQueryable<Lot> AddDetails(IQueryable<Lot> query)
     {
-        return await _context.Lots
-            .Where(lot => lot.SellerId == sellerId)
-            .ToListAsync();
+        // Note: bid history is intentionally not loaded here. The paged
+        // catalog only needs LotDto data, and loading every bid per lot
+        // makes anonymous catalog requests expensive.
+        return query
+            .Include(lot => lot.Seller)
+            .Include(lot => lot.Winner)
+            .Include(lot => lot.Category)
+            .Include(lot => lot.Images)
+            .AsSplitQuery();
     }
-
-    public async Task<IEnumerable<Lot>> GetLotByIdAsync(int ID)
-    {
-        return await _context.Lots
-            .Where(lot => lot.Id == ID)
-            .ToListAsync();
-    }
-
 }
