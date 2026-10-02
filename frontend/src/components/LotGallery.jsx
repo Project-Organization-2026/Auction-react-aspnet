@@ -1,5 +1,7 @@
+import { getMainImage } from "../utils/lot.js";
+
 function LotGallery({ lot }) {
-  const image = lot.images?.find((item) => item.isMain) ?? lot.images?.[0];
+  const image = getMainImage(lot);
   return (
     <div className="lot-gallery">
       {image ? (

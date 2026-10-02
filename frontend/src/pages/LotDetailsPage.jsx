@@ -1,12 +1,8 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import LotGallery from "../components/LotGallery";
-
-const price = (value) =>
-  new Intl.NumberFormat("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value ?? 0);
+import { formatPrice } from "../utils/format.js";
+import { LOT_STATUS, getEndLabel } from "../utils/lot.js";
 
 function LotDetailsPage({ lots, onPlaceBid }) {
   const { id } = useParams();
@@ -27,16 +23,12 @@ function LotDetailsPage({ lots, onPlaceBid }) {
   }
 
   const minBid = Number(lot.currentPrice ?? 0) + Number(lot.minBidStep ?? 0);
-  const endDate = new Date(lot.endTime).toLocaleString(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
 
   const submit = (event) => {
     event.preventDefault();
     const value = Number(amount);
     if (!Number.isFinite(value) || value < minBid) {
-      setForm({ id, amount, error: `Minimum bid is ${price(minBid)}` });
+      setForm({ id, amount, error: `Minimum bid is ${formatPrice(minBid)}` });
       return;
     }
     onPlaceBid(lot.id, value);
@@ -54,13 +46,11 @@ function LotDetailsPage({ lots, onPlaceBid }) {
           {lot.category && <span className="bid-panel__category">{lot.category.name}</span>}
           <h1>{lot.title}</h1>
           <div className="bid-panel__price-label">Current price</div>
-          <div className="bid-panel__price">{price(lot.currentPrice)}</div>
-          <div className="bid-panel__end">
-            {lot.status === 2 ? "Ended" : "Ends"} {endDate}
-          </div>
-          {lot.status === 1 ? (
+          <div className="bid-panel__price">{formatPrice(lot.currentPrice)}</div>
+          <div className="bid-panel__end">{getEndLabel(lot)}</div>
+          {lot.status === LOT_STATUS.ACTIVE ? (
             <form onSubmit={submit}>
-              <label htmlFor="bid-amount">Your bid (min {price(minBid)})</label>
+              <label htmlFor="bid-amount">Your bid (min {formatPrice(minBid)})</label>
               <input
                 id="bid-amount"
                 type="number"
