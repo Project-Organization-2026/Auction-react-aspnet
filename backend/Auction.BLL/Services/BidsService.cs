@@ -60,6 +60,13 @@ public class BidsService
                 $"Bid amount must be between 0.01 and {MonetaryLimits.MaxAmount}.");
         }
 
+        if (!MonetaryLimits.HasValidScale(dto.Amount))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(dto),
+                "Bid amount cannot have more than two decimal places.");
+        }
+
         await using var transaction = await _repositoryWrapper.BeginTransactionAsync();
         var lot = await _repositoryWrapper.LotsRepository.GetForUpdateAsync(dto.LotId);
 

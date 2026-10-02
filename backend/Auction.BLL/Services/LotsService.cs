@@ -116,9 +116,11 @@ public class LotsService
 
     public async Task DeleteLotAsync(int id, int userId)
     {
-        var lot = await _repositoryWrapper.LotsRepository.GetDetailsByIdAsync(
-            id,
-            asNoTracking: false);
+        // Lock the lot inside a transaction so a concurrent bid cannot slip
+        // in between the funded check and the delete (cascade would strand
+        // the bidder's deducted balance).
+        await using var transaction = await _repositoryWrapper.BeginTransactionAsync();
+        var lot = await _repositoryWrapper.LotsRepository.GetForUpdateAsync(id);
         EnsureOwner(lot, userId);
 
         var hasBids = await _repositoryWrapper.BidsRepository.AnyAsync(
@@ -134,6 +136,7 @@ public class LotsService
 
         _repositoryWrapper.LotsRepository.Delete(lot!);
         await _repositoryWrapper.SaveChangesAsync();
+        await transaction.CommitAsync();
     }
 
     public async Task<LotDto> CloseLotAsync(int id, int userId)
@@ -224,6 +227,14 @@ public class LotsService
             throw new ArgumentOutOfRangeException(
                 nameof(dto),
                 $"Starting price and minimum bid step must be between 0.01 and {MonetaryLimits.MaxAmount}.");
+        }
+
+        if (!MonetaryLimits.HasValidScale(dto.StartingPrice) ||
+            !MonetaryLimits.HasValidScale(dto.MinBidStep))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(dto),
+                "Starting price and minimum bid step cannot have more than two decimal places.");
         }
 
         if (NormalizeUtc(dto.EndTime) <= DateTime.UtcNow)

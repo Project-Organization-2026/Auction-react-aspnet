@@ -1,3 +1,4 @@
+using Auction.BLL.Constants;
 using Auction.BLL.DTOs.Users;
 using Auction.DAL.Entities;
 using Auction.DAL.Repositories.Interfaces;
@@ -88,6 +89,13 @@ public class UsersService
             throw new ArgumentOutOfRangeException(
                 nameof(amount),
                 "Top-up amount must be greater than zero.");
+        }
+
+        if (!MonetaryLimits.HasValidScale(amount))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(amount),
+                "Top-up amount cannot have more than two decimal places.");
         }
 
         await using var transaction = await _repositoryWrapper.BeginTransactionAsync();

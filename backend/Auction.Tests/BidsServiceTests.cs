@@ -83,6 +83,15 @@ public class BidsServiceTests
     }
 
     [Fact]
+    public async Task CreateBid_WithTooManyDecimalPlaces_IsRejected()
+    {
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
+            _service.CreateBidAsync(new CreateBidDto { LotId = 1, Amount = 120.005m }, 2));
+
+        _wrapper.Verify(item => item.SaveChangesAsync(), Times.Never);
+    }
+
+    [Fact]
     public async Task CreateBid_WithValidAmount_DeductsBalanceAndCommits()
     {
         var lot = CreateActiveLot(sellerId: 5);

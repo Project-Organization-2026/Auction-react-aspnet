@@ -38,6 +38,7 @@ public class AuctionDbContext : DbContext
             entity.Property(e => e.Id).ValueGeneratedOnAdd();
             entity.Property(e => e.Name).IsRequired().HasMaxLength(256);
             entity.Property(e => e.Description).HasMaxLength(1000);
+            entity.HasIndex(e => e.Name).IsUnique();
         });
 
         // Lot configuration
