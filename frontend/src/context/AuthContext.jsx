@@ -45,26 +45,34 @@ export function AuthProvider({ children }) {
 
   const login = async (email, password) => {
     const data = await authApi.login(email, password);
-    if (data.token) {
-      localStorage.setItem("token", data.token);
-      setToken(data.token);
+    const jwt = data?.accessToken || data?.token;
+    if (jwt) {
+      localStorage.setItem("token", jwt);
+      setToken(jwt);
+      if (data.user) {
+        setUser(data.user);
+      }
       setIsLoading(true);
       const profile = await fetchProfile();
-      return profile;
+      return profile || data.user;
     }
-    return null;
+    throw new Error("No access token received from server");
   };
 
   const register = async (userName, email, password) => {
     const data = await authApi.register(userName, email, password);
-    if (data.token) {
-      localStorage.setItem("token", data.token);
-      setToken(data.token);
+    const jwt = data?.accessToken || data?.token;
+    if (jwt) {
+      localStorage.setItem("token", jwt);
+      setToken(jwt);
+      if (data.user) {
+        setUser(data.user);
+      }
       setIsLoading(true);
       const profile = await fetchProfile();
-      return profile;
+      return profile || data.user;
     }
-    return null;
+    throw new Error("No access token received from server");
   };
 
   const logout = () => {

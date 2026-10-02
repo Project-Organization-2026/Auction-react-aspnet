@@ -21,7 +21,7 @@ function Header() {
   return (
     <>
       <div className="announcement">
-        Живі аукціони в реальному часі • Підтримка швидких ставок
+        Live Auctions • Instant Bidding • Verified Sellers
       </div>
 
       <header className="site-header">
@@ -33,7 +33,7 @@ function Header() {
 
           <nav className="main-nav" aria-label="Main navigation">
             <Link to="/" aria-current={pathname === "/" ? "page" : undefined}>
-              Каталог
+              Auctions
             </Link>
             {isAuthenticated && (
               <>
@@ -41,13 +41,13 @@ function Header() {
                   to="/create-lot"
                   aria-current={pathname === "/create-lot" ? "page" : undefined}
                 >
-                  Створити лот
+                  Create Lot
                 </Link>
                 <Link
                   to="/profile"
                   aria-current={pathname === "/profile" ? "page" : undefined}
                 >
-                  Мій кабінет
+                  My Profile
                 </Link>
               </>
             )}
@@ -60,14 +60,14 @@ function Header() {
                   type="button"
                   className="balance-pill"
                   onClick={() => setTopUpModalOpen(true)}
-                  title="Поповнити баланс"
+                  title="Top up balance"
                 >
-                  <span className="balance-label">Баланс:</span>
+                  <span className="balance-label">Balance:</span>
                   <span className="balance-value">{formatPrice(user?.balance ?? 0)}</span>
-                  <span className="balance-add">+</span>
+                  <span className="balance-add" aria-hidden="true">+</span>
                 </button>
 
-                <Link to="/profile" className="user-name-link" title="Перейти в кабінет">
+                <Link to="/profile" className="user-name-link" title="Open profile">
                   👤 {user?.userName}
                 </Link>
 
@@ -75,9 +75,9 @@ function Header() {
                   type="button"
                   className="header-logout-btn"
                   onClick={logout}
-                  title="Вийти"
+                  title="Sign out"
                 >
-                  Вийти
+                  Sign Out
                 </button>
               </div>
             ) : (
@@ -87,14 +87,14 @@ function Header() {
                   className="header-login-btn"
                   onClick={() => openAuth("login")}
                 >
-                  Увійти
+                  Sign In
                 </button>
                 <button
                   type="button"
                   className="header-cta"
                   onClick={() => openAuth("register")}
                 >
-                  Реєстрація
+                  Register
                 </button>
               </div>
             )}

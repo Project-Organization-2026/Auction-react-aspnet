@@ -63,11 +63,11 @@ public static class DevelopmentDataSeeder
     {
         var categoriesToSeed = new List<Category>
         {
-            new Category { Name = "Electronics", Description = "Електроніка, цифрові гаджети та ретро-техніка" },
-            new Category { Name = "Art & Antiques", Description = "Картини, скульптури, антикварні меблі та декор" },
-            new Category { Name = "Collectibles", Description = "Рідкісні предмети, монети, комікси та автографи" },
-            new Category { Name = "Watches & Jewelry", Description = "Преміальні наручні годинники та ювелірні вироби" },
-            new Category { Name = "Fashion & Retro", Description = "Колекційний вінтажний одяг, взуття та аксесуари" }
+            new Category { Name = "Electronics", Description = "Electronics, digital gadgets and vintage tech" },
+            new Category { Name = "Art & Antiques", Description = "Paintings, sculptures, antique furniture and fine art" },
+            new Category { Name = "Collectibles", Description = "Rare collectibles, coins, comics and signed memorabilia" },
+            new Category { Name = "Watches & Jewelry", Description = "Luxury timepieces, wristwatches and fine jewelry" },
+            new Category { Name = "Fashion & Retro", Description = "Collector vintage clothing, sneakers and accessories" }
         };
 
         var existingNames = await context.Categories
@@ -86,7 +86,8 @@ public static class DevelopmentDataSeeder
 
     public static async Task SeedLotsAsync(AuctionDbContext context)
     {
-        var defaultUser = await context.Users.FirstOrDefaultAsync(u => u.UserName == "user1");
+        var defaultUser = await context.Users.FirstOrDefaultAsync(u => u.UserName == "user1")
+                          ?? await context.Users.FirstOrDefaultAsync();
         if (defaultUser == null)
         {
             return;
@@ -100,7 +101,7 @@ public static class DevelopmentDataSeeder
             new Lot
             {
                 Title = "Vintage 1968 Omega Speedmaster Professional",
-                Description = "Легендарний 'Moonwatch' 1968 року випуску. Калібр 861, оригінальний циферблат із тритієвими мітками та патиною, сталевий браслет. Пройдено повний сервіс у Швейцарії.",
+                Description = "Legendary 1968 'Moonwatch'. Calibre 861, original stepped dial with tritium patina, stainless steel bracelet. Fully serviced in Switzerland.",
                 StartingPrice = 4500.00m,
                 CurrentPrice = 4800.00m,
                 MinBidStep = 100.00m,
@@ -119,7 +120,7 @@ public static class DevelopmentDataSeeder
             new Lot
             {
                 Title = "Leica M3 Rangefinder Camera (1956)",
-                Description = "Класична далекомірна плівкова фотокамера Leica M3 Double Stroke. У комплекті світлосильний об'єктив Summicron 50mm f/2. Ідеальний колекційний стан.",
+                Description = "Classic Double Stroke 35mm rangefinder film camera. Comes with Summicron 50mm f/2 lens. Immaculate collector condition with leather case.",
                 StartingPrice = 1200.00m,
                 CurrentPrice = 1250.00m,
                 MinBidStep = 50.00m,
@@ -138,7 +139,7 @@ public static class DevelopmentDataSeeder
             new Lot
             {
                 Title = "Original Watercolor: 'Venice Canal at Twilight'",
-                Description = "Оригінальна акварель на високоякісному бавовняному папері Arches (300 г/м²). Робота європейського майстра. Оформлена в музейне паспарту та дерев'яну раму.",
+                Description = "Original watercolor on premium Arches 300gsm cotton cold-press paper. European master artist piece. Framed with museum-grade UV-protective glass.",
                 StartingPrice = 350.00m,
                 CurrentPrice = 350.00m,
                 MinBidStep = 25.00m,
@@ -156,7 +157,7 @@ public static class DevelopmentDataSeeder
             new Lot
             {
                 Title = "Nike Air Jordan 1 Retro High Chicago (1985)",
-                Description = "Оригінальна культова пара Air Jordan 1 'Chicago' 1985 року випуску у розмірі US 10. Рідкісний екземпляр у колекційному стані з оригінальною коробкою.",
+                Description = "Authentic 1985 release of the iconic Air Jordan 1 'Chicago' in US Size 10. Holy grail collectors item with original laces and box.",
                 StartingPrice = 2800.00m,
                 CurrentPrice = 3100.00m,
                 MinBidStep = 100.00m,
@@ -174,7 +175,7 @@ public static class DevelopmentDataSeeder
             new Lot
             {
                 Title = "Apple Macintosh Plus (1986) Fully Working",
-                Description = "Вінтажний персональний комп'ютер Apple Macintosh Plus із клавіатурою, мишкою та оригінальною сумкою для перенесення. 4 МБ RAM, робочий стан.",
+                Description = "Vintage Apple Macintosh Plus computer complete with mechanical keyboard, original mouse, and travel bag. 4MB RAM upgrade, verified boots System 6.",
                 StartingPrice = 600.00m,
                 CurrentPrice = 650.00m,
                 MinBidStep = 25.00m,
@@ -192,7 +193,7 @@ public static class DevelopmentDataSeeder
             new Lot
             {
                 Title = "First Edition: The Hobbit by J.R.R. Tolkien",
-                Description = "Рідкісне колекційне видання у твердій палітурці із суперобкладинкою. Сертифікат автентичності та захисний футляр у комплекті.",
+                Description = "Rare collector hardcover edition with dust jacket, decorative maps, and presentation slipcase. Authenticity certificate included.",
                 StartingPrice = 1800.00m,
                 CurrentPrice = 2200.00m,
                 MinBidStep = 100.00m,
@@ -210,7 +211,7 @@ public static class DevelopmentDataSeeder
             new Lot
             {
                 Title = "Carved Victorian Mahogany Armchair",
-                Description = "Антикварне крісло кінця XIX століття з масиву червоного дерева з ручною різьбою та шовковою оббивкою. Повна професійна реставрація.",
+                Description = "Late 19th-century solid mahogany armchair with intricate hand carvings and silk damask upholstery. Professionally preserved and restored.",
                 StartingPrice = 850.00m,
                 CurrentPrice = 850.00m,
                 MinBidStep = 50.00m,

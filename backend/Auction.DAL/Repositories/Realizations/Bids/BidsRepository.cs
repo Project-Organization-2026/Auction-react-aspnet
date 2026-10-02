@@ -33,6 +33,7 @@ public class BidsRepository : RepositoryBase<Bid>, IBidsRepository
     {
         var query = _context.Bids
             .AsNoTracking()
+            .Include(bid => bid.User)
             .Where(bid => bid.LotId == lotId);
 
         var totalCount = await query.CountAsync();
@@ -51,5 +52,18 @@ public class BidsRepository : RepositoryBase<Bid>, IBidsRepository
             .ToListAsync();
 
         return (items, totalCount);
+    }
+
+    public async Task<IReadOnlyList<Bid>> GetByUserIdAsync(int userId)
+    {
+        return await _context.Bids
+            .AsNoTracking()
+            .Include(b => b.Lot)
+                .ThenInclude(l => l.Images)
+            .Include(b => b.Lot)
+                .ThenInclude(l => l.Category)
+            .Where(b => b.UserId == userId)
+            .OrderByDescending(b => b.PlacedAt)
+            .ToListAsync();
     }
 }

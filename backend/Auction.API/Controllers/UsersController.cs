@@ -80,4 +80,26 @@ public class UsersController : AuctionControllerBase
             return BadRequest(ex.Message);
         }
     }
+
+    [HttpGet("me/bids")]
+    public async Task<IActionResult> GetCurrentUserBids()
+    {
+        if (!TryGetUserId(out var userId))
+        {
+            return Unauthorized("User ID claim is missing or invalid.");
+        }
+
+        return Ok(await _usersService.GetUserBidsAsync(userId));
+    }
+
+    [HttpGet("me/won-lots")]
+    public async Task<IActionResult> GetCurrentUserWonLots()
+    {
+        if (!TryGetUserId(out var userId))
+        {
+            return Unauthorized("User ID claim is missing or invalid.");
+        }
+
+        return Ok(await _usersService.GetUserWonLotsAsync(userId));
+    }
 }

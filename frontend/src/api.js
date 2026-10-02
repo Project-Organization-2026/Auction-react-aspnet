@@ -49,6 +49,14 @@ export const usersApi = {
     const res = await api.post("/users/me/balance", { amount: Number(amount) });
     return res.data; // { balance }
   },
+  getMyBids: async () => {
+    const res = await api.get("/users/me/bids");
+    return res.data;
+  },
+  getMyWonLots: async () => {
+    const res = await api.get("/users/me/won-lots");
+    return res.data;
+  },
 };
 
 export const categoriesApi = {
@@ -100,6 +108,15 @@ export const lotsApi = {
   },
   addImage: async (lotId, { url, isMain }) => {
     const res = await api.post(`/lots/${lotId}/images`, { url, isMain });
+    return res.data;
+  },
+  uploadImage: async (lotId, file, isMain = false) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("isMain", String(isMain));
+    const res = await api.post(`/lots/${lotId}/images/upload`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
     return res.data;
   },
   deleteImage: async (imageId) => {

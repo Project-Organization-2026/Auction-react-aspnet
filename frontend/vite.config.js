@@ -11,6 +11,16 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+      '/uploads': {
+        target: process.env.VITE_BACKEND_URL || 'http://localhost:5096',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/hubs': {
+        target: process.env.VITE_BACKEND_URL || 'http://localhost:5096',
+        changeOrigin: true,
+        ws: true,
+      },
     },
   },
 })

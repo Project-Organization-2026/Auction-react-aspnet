@@ -1,4 +1,6 @@
 using Auction.BLL.Constants;
+using Auction.BLL.DTOs.Bids;
+using Auction.BLL.DTOs.Lots;
 using Auction.BLL.DTOs.Users;
 using Auction.DAL.Entities;
 using Auction.DAL.Repositories.Interfaces;
@@ -117,6 +119,18 @@ public class UsersService
         await transaction.CommitAsync();
 
         return user.Balance;
+    }
+
+    public async Task<IReadOnlyList<UserBidDto>> GetUserBidsAsync(int userId)
+    {
+        var bids = await _repositoryWrapper.BidsRepository.GetByUserIdAsync(userId);
+        return _mapper.Map<IReadOnlyList<UserBidDto>>(bids);
+    }
+
+    public async Task<IReadOnlyList<LotDto>> GetUserWonLotsAsync(int userId)
+    {
+        var lots = await _repositoryWrapper.LotsRepository.GetWonLotsByUserIdAsync(userId);
+        return _mapper.Map<IReadOnlyList<LotDto>>(lots);
     }
 
     private static void ValidateProfile(UpdateUserProfileDto dto)

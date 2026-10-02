@@ -18,27 +18,28 @@ export default function AuthModal({ isOpen, onClose, initialMode = "login" }) {
     e.preventDefault();
     setError("");
 
-    if (mode === "register" && password.length < 8) {
-      setError("Пароль має містити щонайменше 8 символів.");
-      return;
+    if (mode === "register") {
+      if (!userName.trim()) {
+        setError("Username is required.");
+        return;
+      }
+      if (password.length < 8) {
+        setError("Password must contain at least 8 characters.");
+        return;
+      }
     }
 
     setIsSubmitting(true);
 
     try {
       if (mode === "login") {
-        await login(email, password);
+        await login(email.trim(), password);
       } else {
-        if (!userName.trim()) {
-          setError("Вкажіть ім'я користувача");
-          setIsSubmitting(false);
-          return;
-        }
         await register(userName.trim(), email.trim(), password);
       }
       onClose();
     } catch (err) {
-      setError(getErrorMessage(err, "Помилка авторизації. Перевірте введені дані."));
+      setError(getErrorMessage(err, "Authentication failed. Please check your credentials."));
     } finally {
       setIsSubmitting(false);
     }
@@ -57,7 +58,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = "login" }) {
                 setError("");
               }}
             >
-              Вхід
+              Sign In
             </button>
             <button
               type="button"
@@ -67,10 +68,10 @@ export default function AuthModal({ isOpen, onClose, initialMode = "login" }) {
                 setError("");
               }}
             >
-              Реєстрація
+              Register
             </button>
           </div>
-          <button className="modal-close" onClick={onClose} aria-label="Закрити">
+          <button className="modal-close" onClick={onClose} aria-label="Close">
             ✕
           </button>
         </div>
@@ -84,7 +85,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = "login" }) {
 
           {mode === "register" && (
             <div className="form-group">
-              <label htmlFor="auth-username">Ім'я користувача</label>
+              <label htmlFor="auth-username">Username</label>
               <input
                 id="auth-username"
                 type="text"
@@ -97,7 +98,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = "login" }) {
           )}
 
           <div className="form-group">
-            <label htmlFor="auth-email">Електронна пошта</label>
+            <label htmlFor="auth-email">Email Address</label>
             <input
               id="auth-email"
               type="email"
@@ -110,9 +111,9 @@ export default function AuthModal({ isOpen, onClose, initialMode = "login" }) {
 
           <div className="form-group">
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <label htmlFor="auth-password">Пароль</label>
+              <label htmlFor="auth-password">Password</label>
               {mode === "register" && (
-                <span className="field-hint">мін. 8 символів</span>
+                <span className="field-hint">min. 8 characters</span>
               )}
             </div>
             <input
@@ -128,10 +129,10 @@ export default function AuthModal({ isOpen, onClose, initialMode = "login" }) {
 
           <button type="submit" className="modal-submit-btn" disabled={isSubmitting}>
             {isSubmitting
-              ? "Зачекайте..."
+              ? "Please wait..."
               : mode === "login"
-              ? "Увійти"
-              : "Зареєструватися"}
+              ? "Sign In"
+              : "Create Account"}
           </button>
         </form>
       </div>

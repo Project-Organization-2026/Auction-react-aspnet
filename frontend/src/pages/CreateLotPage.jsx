@@ -15,6 +15,9 @@ export default function CreateLotPage() {
   const [startingPrice, setStartingPrice] = useState("10.00");
   const [minBidStep, setMinBidStep] = useState("1.00");
   const [durationDays, setDurationDays] = useState("7");
+  const [imageMode, setImageMode] = useState("file"); // "file" | "url"
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -28,8 +31,28 @@ export default function CreateLotPage() {
           setCategoryId(String(data[0].id));
         }
       })
-      .catch((err) => console.error("Помилка завантаження категорій", err));
+      .catch((err) => console.error("Failed to load categories", err));
   }, []);
+
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      setError("Image file exceeds 10MB limit.");
+      return;
+    }
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+    setError("");
+  };
+
+  const handleRemoveFile = () => {
+    setImageFile(null);
+    if (imagePreview) {
+      URL.revokeObjectURL(imagePreview);
+      setImagePreview("");
+    }
+  };
 
   if (authLoading) return null;
   if (!isAuthenticated) return <Navigate to="/" replace />;
@@ -43,16 +66,15 @@ export default function CreateLotPage() {
     const days = Number(durationDays);
 
     if (!title.trim()) {
-      setError("Вкажіть назву лота");
+      setError("Please provide an item title.");
       return;
     }
 
     if (price <= 0 || step <= 0) {
-      setError("Початкова ціна та крок ставки мають бути більше нуля");
+      setError("Starting price and bid step must be greater than zero.");
       return;
     }
 
-    // Calculate EndTime
     const endTime = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
 
     setIsSubmitting(true);
@@ -67,22 +89,27 @@ export default function CreateLotPage() {
         status: 1, // Active
       });
 
-      // If image URL is provided, add it to lot
-      if (imageUrl && imageUrl.trim()) {
+      if (imageMode === "file" && imageFile) {
+        try {
+          await lotsApi.uploadImage(createdLot.id, imageFile, true);
+        } catch (uploadErr) {
+          console.warn("Could not upload image, but lot was created", uploadErr);
+        }
+      } else if (imageMode === "url" && imageUrl && imageUrl.trim()) {
         try {
           await lotsApi.addImage(createdLot.id, {
             url: imageUrl.trim(),
             isMain: true,
           });
         } catch (imgErr) {
-          console.warn("Не вдалося додати фото, але лот створено", imgErr);
+          console.warn("Could not attach image, but lot was created", imgErr);
         }
       }
 
       await refreshUser();
       navigate(`/lots/${createdLot.id}`);
     } catch (err) {
-      setError(getErrorMessage(err, "Помилка створення лота. Перевірте введені дані."));
+      setError(getErrorMessage(err, "Failed to create auction. Please check your inputs."));
     } finally {
       setIsSubmitting(false);
     }
@@ -91,24 +118,24 @@ export default function CreateLotPage() {
   return (
     <main className="page-main">
       <Link className="lot-back" to="/profile">
-        ← До особистого кабінету
+        ← Back to profile
       </Link>
 
       <section className="create-lot-section">
-        <h1>Створення нового аукціону</h1>
+        <h1>Create New Auction</h1>
         <p className="create-lot-sub">
-          Заповніть інформацію про товар, щоб виставити його на торги
+          Fill in the details below to list your item for live bidding
         </p>
 
         {error && <div className="bid-panel__alert error" role="alert">{error}</div>}
 
         <form className="create-lot-form" onSubmit={handleSubmit}>
           <div className="form-group">
-            <label htmlFor="lot-title">Назва товару *</label>
+            <label htmlFor="lot-title">Item Title *</label>
             <input
               id="lot-title"
               type="text"
-              placeholder="Наприклад: Vintage Rolex Submariner"
+              placeholder="e.g. Vintage 1968 Omega Speedmaster"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               maxLength={512}
@@ -117,13 +144,13 @@ export default function CreateLotPage() {
           </div>
 
           <div className="form-group">
-            <label htmlFor="lot-category">Категорія</label>
+            <label htmlFor="lot-category">Category</label>
             <select
               id="lot-category"
               value={categoryId}
               onChange={(e) => setCategoryId(e.target.value)}
             >
-              <option value="">Без категорії</option>
+              <option value="">No category</option>
               {categories.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
@@ -134,7 +161,7 @@ export default function CreateLotPage() {
 
           <div className="form-row">
             <div className="form-group">
-              <label htmlFor="lot-starting-price">Початкова ціна ($) *</label>
+              <label htmlFor="lot-starting-price">Starting Price ($) *</label>
               <input
                 id="lot-starting-price"
                 type="number"
@@ -142,12 +169,16 @@ export default function CreateLotPage() {
                 step="0.01"
                 value={startingPrice}
                 onChange={(e) => setStartingPrice(e.target.value)}
+                onBlur={() => {
+                  const val = parseFloat(startingPrice);
+                  if (!isNaN(val) && val > 0) setStartingPrice(val.toFixed(2));
+                }}
                 required
               />
             </div>
 
             <div className="form-group">
-              <label htmlFor="lot-min-bid-step">Мінімальний крок ставки ($) *</label>
+              <label htmlFor="lot-min-bid-step">Minimum Bid Step ($) *</label>
               <input
                 id="lot-min-bid-step"
                 type="number"
@@ -155,43 +186,103 @@ export default function CreateLotPage() {
                 step="0.01"
                 value={minBidStep}
                 onChange={(e) => setMinBidStep(e.target.value)}
+                onBlur={() => {
+                  const val = parseFloat(minBidStep);
+                  if (!isNaN(val) && val > 0) setMinBidStep(val.toFixed(2));
+                }}
                 required
               />
             </div>
           </div>
 
           <div className="form-group">
-            <label htmlFor="lot-duration">Тривалість аукціону</label>
+            <label htmlFor="lot-duration">Auction Duration</label>
             <select
               id="lot-duration"
               value={durationDays}
               onChange={(e) => setDurationDays(e.target.value)}
             >
-              <option value="1">1 день (24 години)</option>
-              <option value="3">3 дні</option>
-              <option value="7">7 днів (1 тиждень)</option>
-              <option value="14">14 днів (2 тижні)</option>
+              <option value="1">1 day (24 hours)</option>
+              <option value="3">3 days</option>
+              <option value="7">7 days (1 week)</option>
+              <option value="14">14 days (2 weeks)</option>
             </select>
           </div>
 
           <div className="form-group">
-            <label htmlFor="lot-image-url">Посилання на головне фото (URL)</label>
-            <input
-              id="lot-image-url"
-              type="url"
-              placeholder="https://images.unsplash.com/photo-..."
-              value={imageUrl}
-              onChange={(e) => setImageUrl(e.target.value)}
-            />
-            <span className="field-hint">Вкажіть пряме посилання на зображення (HTTP або HTTPS)</span>
+            <label>Item Image</label>
+            <div className="image-mode-tabs">
+              <button
+                type="button"
+                className={`image-tab-btn ${imageMode === "file" ? "active" : ""}`}
+                onClick={() => setImageMode("file")}
+              >
+                📁 Upload File
+              </button>
+              <button
+                type="button"
+                className={`image-tab-btn ${imageMode === "url" ? "active" : ""}`}
+                onClick={() => setImageMode("url")}
+              >
+                🔗 Image URL
+              </button>
+            </div>
+
+            {imageMode === "file" ? (
+              <div className="file-upload-box">
+                {imagePreview ? (
+                  <div className="file-upload-preview">
+                    <img src={imagePreview} alt="Preview" />
+                    <div className="file-upload-info">
+                      <span className="file-name">{imageFile?.name}</span>
+                      <span className="file-size">
+                        {(imageFile?.size / 1024).toFixed(1)} KB
+                      </span>
+                      <button
+                        type="button"
+                        className="file-remove-btn"
+                        onClick={handleRemoveFile}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <label className="file-upload-dropzone">
+                    <input
+                      type="file"
+                      accept="image/png, image/jpeg, image/webp, image/gif"
+                      onChange={handleFileChange}
+                      style={{ display: "none" }}
+                    />
+                    <div className="dropzone-content">
+                      <span className="dropzone-icon">🖼️</span>
+                      <span className="dropzone-text">Click to choose image or drag & drop</span>
+                      <span className="field-hint">PNG, JPG, WEBP, GIF up to 10MB</span>
+                    </div>
+                  </label>
+                )}
+              </div>
+            ) : (
+              <div>
+                <input
+                  id="lot-image-url"
+                  type="url"
+                  placeholder="https://images.unsplash.com/photo-..."
+                  value={imageUrl}
+                  onChange={(e) => setImageUrl(e.target.value)}
+                />
+                <span className="field-hint">Direct link to an image (HTTP or HTTPS)</span>
+              </div>
+            )}
           </div>
 
           <div className="form-group">
-            <label htmlFor="lot-description">Опис лота</label>
+            <label htmlFor="lot-description">Description</label>
             <textarea
               id="lot-description"
               rows={5}
-              placeholder="Детальний опис товару, стан, комплектація, історія тощо..."
+              placeholder="Provide condition, provenance, technical specifications..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               maxLength={5000}
@@ -199,7 +290,7 @@ export default function CreateLotPage() {
           </div>
 
           <button type="submit" className="create-lot-submit-btn" disabled={isSubmitting}>
-            {isSubmitting ? "Створення лота..." : "Опублікувати лот"}
+            {isSubmitting ? "Publishing..." : "Publish Auction"}
           </button>
         </form>
       </section>

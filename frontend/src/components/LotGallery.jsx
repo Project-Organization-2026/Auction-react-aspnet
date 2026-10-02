@@ -16,7 +16,7 @@ function LotGallery({ lot }) {
         {selectedImage ? (
           <img src={selectedImage} alt={lot?.title} />
         ) : (
-          <div className="lot-gallery__no-image">Зображення відсутнє</div>
+          <div className="lot-gallery__no-image">No image available</div>
         )}
       </div>
 
@@ -29,7 +29,7 @@ function LotGallery({ lot }) {
               className={`lot-gallery__thumb ${selectedImage === img.url ? "active" : ""}`}
               onClick={() => setSelectedImage(img.url)}
             >
-              <img src={img.url} alt="мініатюра" />
+              <img src={img.url} alt="Thumbnail" />
             </button>
           ))}
         </div>

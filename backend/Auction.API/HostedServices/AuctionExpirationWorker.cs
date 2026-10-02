@@ -20,28 +20,35 @@ public class AuctionExpirationWorker : BackgroundService
     {
         _logger.LogInformation("AuctionExpirationWorker started.");
 
-        using var periodicTimer = new PeriodicTimer(_checkInterval);
-
-        while (!stoppingToken.IsCancellationRequested &&
-               await periodicTimer.WaitForNextTickAsync(stoppingToken))
+        try
         {
-            try
-            {
-                using var scope = _scopeFactory.CreateScope();
-                var lotsService = scope.ServiceProvider.GetRequiredService<LotsService>();
+            using var periodicTimer = new PeriodicTimer(_checkInterval);
 
-                var closedCount = await lotsService.CloseExpiredLotsAsync();
-                if (closedCount > 0)
+            while (!stoppingToken.IsCancellationRequested &&
+                   await periodicTimer.WaitForNextTickAsync(stoppingToken))
+            {
+                try
                 {
-                    _logger.LogInformation(
-                        "AuctionExpirationWorker automatically finalized {Count} expired lot(s).",
-                        closedCount);
+                    using var scope = _scopeFactory.CreateScope();
+                    var lotsService = scope.ServiceProvider.GetRequiredService<LotsService>();
+
+                    var closedCount = await lotsService.CloseExpiredLotsAsync();
+                    if (closedCount > 0)
+                    {
+                        _logger.LogInformation(
+                            "AuctionExpirationWorker automatically finalized {Count} expired lot(s).",
+                            closedCount);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error occurred while executing AuctionExpirationWorker.");
                 }
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error occurred while executing AuctionExpirationWorker.");
-            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Graceful cancellation on app shutdown
         }
 
         _logger.LogInformation("AuctionExpirationWorker stopping.");

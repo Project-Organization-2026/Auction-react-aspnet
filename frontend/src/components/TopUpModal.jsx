@@ -4,7 +4,7 @@ import { formatPrice } from "../utils/format";
 import { getErrorMessage } from "../utils/errors";
 
 export default function TopUpModal({ isOpen, onClose }) {
-  const [amount, setAmount] = useState("100");
+  const [amount, setAmount] = useState("100.00");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const { topUpBalance, user } = useAuth();
@@ -15,7 +15,7 @@ export default function TopUpModal({ isOpen, onClose }) {
     e.preventDefault();
     const val = Number(amount);
     if (!Number.isFinite(val) || val <= 0) {
-      setError("Сума має бути більшою за 0");
+      setError("Amount must be greater than 0");
       return;
     }
 
@@ -26,9 +26,23 @@ export default function TopUpModal({ isOpen, onClose }) {
       await topUpBalance(val);
       onClose();
     } catch (err) {
-      setError(getErrorMessage(err, "Помилка поповнення балансу."));
+      setError(getErrorMessage(err, "Failed to top up balance."));
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleAddAmount = (addVal) => {
+    const current = parseFloat(amount);
+    const next = (Number.isFinite(current) && current > 0 ? current : 0) + addVal;
+    setAmount(next.toFixed(2));
+    setError("");
+  };
+
+  const handleBlur = () => {
+    const num = parseFloat(amount);
+    if (Number.isFinite(num) && num > 0) {
+      setAmount(num.toFixed(2));
     }
   };
 
@@ -36,28 +50,33 @@ export default function TopUpModal({ isOpen, onClose }) {
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-card" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>Поповнення балансу</h2>
-          <button className="modal-close" onClick={onClose} aria-label="Закрити">
+          <h2>Top Up Balance</h2>
+          <button className="modal-close" onClick={onClose} aria-label="Close">
             ✕
           </button>
         </div>
 
         <p className="modal-sub">
-          Поточний баланс: <strong>{formatPrice(user?.balance ?? 0)}</strong>
+          Current balance: <strong>{formatPrice(user?.balance ?? 0)}</strong>
         </p>
 
         <form className="modal-form" onSubmit={handleSubmit}>
           {error && <div className="modal-error" role="alert">{error}</div>}
 
           <div className="form-group">
-            <label htmlFor="topup-amount">Сума ($)</label>
+            <label htmlFor="topup-amount">Deposit Amount ($)</label>
             <input
               id="topup-amount"
               type="number"
-              min="1"
+              min="0.01"
               step="0.01"
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              onChange={(e) => {
+                setAmount(e.target.value);
+                setError("");
+              }}
+              onBlur={handleBlur}
+              placeholder="0.00"
               required
             />
           </div>
@@ -68,7 +87,7 @@ export default function TopUpModal({ isOpen, onClose }) {
                 type="button"
                 key={val}
                 className="quick-amount-btn"
-                onClick={() => setAmount(String(val))}
+                onClick={() => handleAddAmount(val)}
               >
                 +${val}
               </button>
@@ -76,7 +95,7 @@ export default function TopUpModal({ isOpen, onClose }) {
           </div>
 
           <button type="submit" className="modal-submit-btn" disabled={isSubmitting}>
-            {isSubmitting ? "Поповнюємо..." : "Поповнити баланс"}
+            {isSubmitting ? "Processing..." : "Deposit Funds"}
           </button>
         </form>
       </div>

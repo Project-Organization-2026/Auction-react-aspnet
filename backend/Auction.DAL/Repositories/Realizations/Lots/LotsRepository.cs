@@ -1,4 +1,4 @@
-﻿using Auction.DAL.Data;
+using Auction.DAL.Data;
 using Auction.DAL.Entities;
 using Auction.DAL.Repositories.Interfaces.Lots;
 using Auction.DAL.Repositories.Realizations.Base;
@@ -99,6 +99,14 @@ public class LotsRepository : RepositoryBase<Lot>, ILotsRepository
             .Include(lot => lot.Images)
             .AsTracking()
             .SingleOrDefaultAsync();
+    }
+
+    public async Task<IReadOnlyList<Lot>> GetWonLotsByUserIdAsync(int userId)
+    {
+        return await AddDetails(_context.Lots.AsNoTracking())
+            .Where(lot => lot.WinnerId == userId && lot.Status == Auction.DAL.Enums.LotStatus.Completed)
+            .OrderByDescending(lot => lot.EndTime)
+            .ToListAsync();
     }
 
     private static IQueryable<Lot> AddDetails(IQueryable<Lot> query)

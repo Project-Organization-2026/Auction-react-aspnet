@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import AuctionList from "../components/AuctionList";
 import AuctionToolbar from "../components/AuctionToolbar";
 import { categoriesApi, lotsApi } from "../api";
+import { getAuctionHubConnection, startAuctionHub } from "../services/auctionHub";
 
 function MainPage() {
   const [lots, setLots] = useState([]);
@@ -24,10 +25,35 @@ function MainPage() {
         if (isMounted) setCategories(data);
       })
       .catch((err) => {
-        console.error("Не вдалося завантажити категорії", err);
+        console.error("Failed to load categories", err);
       });
     return () => {
       isMounted = false;
+    };
+  }, []);
+
+  // SignalR real-time updates for catalog lots
+  useEffect(() => {
+    let isMounted = true;
+    startAuctionHub();
+    const hub = getAuctionHubConnection();
+
+    const handleLotUpdated = (update) => {
+      if (!isMounted) return;
+      setLots((prev) =>
+        prev.map((lot) =>
+          lot.id === update.lotId
+            ? { ...lot, currentPrice: update.currentPrice, winnerId: update.winnerId }
+            : lot
+        )
+      );
+    };
+
+    hub.on("LotUpdated", handleLotUpdated);
+
+    return () => {
+      isMounted = false;
+      hub.off("LotUpdated", handleLotUpdated);
     };
   }, []);
 
@@ -48,8 +74,8 @@ function MainPage() {
       setTotalPages(data.totalPages || 1);
       setTotalCount(data.totalCount || 0);
     } catch (err) {
-      console.error("Помилка завантаження лотів", err);
-      setError("Не вдалося завантажити лоти. Перевірте з'єднання з сервером.");
+      console.error("Failed to load lots", err);
+      setError("Failed to load auctions. Check your server connection.");
     } finally {
       setIsLoading(false);
     }
@@ -59,7 +85,6 @@ function MainPage() {
     fetchLots();
   }, [fetchLots]);
 
-  // Reset to page 1 on filter changes
   const handleSearchChange = (val) => {
     setSearch(val);
     setPage(1);
@@ -78,7 +103,7 @@ function MainPage() {
   return (
     <main className="page-main" id="top">
       <section className="auction-section" id="auctions" aria-labelledby="auctions-title">
-        <h1 id="auctions-title">Аукціони</h1>
+        <h1 id="auctions-title">Auctions</h1>
 
         <AuctionToolbar
           search={search}
@@ -95,7 +120,7 @@ function MainPage() {
           <div className="catalog-error" role="alert">
             <p>{error}</p>
             <button type="button" onClick={fetchLots} className="retry-btn">
-              Спробувати знову
+              Try Again
             </button>
           </div>
         )}
@@ -103,7 +128,7 @@ function MainPage() {
         {isLoading ? (
           <div className="catalog-loading">
             <div className="spinner" />
-            <p>Завантаження лотів...</p>
+            <p>Loading auctions...</p>
           </div>
         ) : (
           <>
@@ -117,10 +142,10 @@ function MainPage() {
                   disabled={page <= 1}
                   onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
                 >
-                  ← Попередня
+                  ← Previous
                 </button>
                 <span className="pagination-info">
-                  Сторінка {page} з {totalPages}
+                  Page {page} of {totalPages}
                 </span>
                 <button
                   type="button"
@@ -128,7 +153,7 @@ function MainPage() {
                   disabled={page >= totalPages}
                   onClick={() => setPage((prev) => Math.min(prev + 1, totalPages))}
                 >
-                  Наступна →
+                  Next →
                 </button>
               </div>
             )}

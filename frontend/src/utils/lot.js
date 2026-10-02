@@ -24,5 +24,5 @@ export const isLotEnded = (lot) => {
 
 export const getEndLabel = (lot) => {
   if (!lot) return "";
-  return `${isLotEnded(lot) ? "Завершено" : "Завершується"} ${formatDateTime(lot.endTime)}`;
+  return `${isLotEnded(lot) ? "Ended" : "Ends"} ${formatDateTime(lot.endTime)}`;
 };

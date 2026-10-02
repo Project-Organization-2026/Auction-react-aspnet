@@ -149,6 +149,7 @@ public class BidsService
 
         var bid = _mapper.Map<Bid>(dto);
         bid.UserId = userId;
+        bid.User = bidder;
         bid.PlacedAt = DateTime.UtcNow;
 
         await _repositoryWrapper.BidsRepository.CreateAsync(bid);

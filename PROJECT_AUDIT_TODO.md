@@ -1,7 +1,7 @@
 # Аудит проекту: BestAuction (React + ASP.NET Core + Blockchain)
 
 > **Роль:** Senior Full-Stack Developer / Architect  
-> **Статус:** Виконано основний спринт інтеграції: фронтенд повністю підключено до реального бекенд API, видалено всі мокові дані, реалізовано авторизацію, кабінет користувача, створення лотів, ставки, історію ставок, фоновий сервіс автоматичного закриття лотів на бекенді, тести та скрипти деплою смарт-контракту.
+> **Статус:** Виконано комплексний спринт функціоналу та оптимізації: єдиний канонічний `.env`, сервісний сідер адміністратора, реальний бекенд API для всіх модулів, SignalR WebSocket оновлення ставок і цін у реальному часі, фізичне завантаження зображень (multipart/form-data), повний кабінет користувача (створені лоти, ставки, виграні аукціони), автоматичний бекенд воркер закриття аукціонів та англомовний UX.
 
 ---
 
@@ -27,27 +27,42 @@
 ## 2. Що доопрацьовано та завершено
 
 ### 2.1. Backend (ASP.NET Core)
+- [x] **Консолідація конфігурації `.env`**:
+  - Видалено дублюючий `.env` та `.env.example` з `backend/Auction.API/`.
+  - Забезпечено єдиний канонічний `.env` у корені репозиторію через `DotNetEnv.Env.TraversePath().Load()`.
+- [x] **Сервісний сідер адміністратора ([AdminDataSeeder.cs](file:///c:/Users/yural/Documents/_PROJECTS/IT%20Step/Auction-react-aspnet/backend/Auction.DAL/Initializer/AdminDataSeeder.cs))**:
+  - Автоматичне створення/оновлення облікового запису адміністратора при старті бекенда за даними з `.env` (`ADMIN_USERNAME`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`).
 - [x] **Автоматичне закриття лотів за таймером**:
   - Створено метод `CloseExpiredLotsAsync` у [LotsService.cs](file:///c:/Users/yural/Documents/_PROJECTS/IT%20Step/Auction-react-aspnet/backend/Auction.BLL/Services/LotsService.cs).
   - Створено фоновий воркер [AuctionExpirationWorker.cs](file:///c:/Users/yural/Documents/_PROJECTS/IT%20Step/Auction-react-aspnet/backend/Auction.API/HostedServices/AuctionExpirationWorker.cs) (`BackgroundService`), зареєстрований у DI. Кожні 30 секунд автоматично фіналізує лоти, де `EndTime <= DateTime.UtcNow`.
+- [x] **Фізичне завантаження зображень ([LotImagesController.cs](file:///c:/Users/yural/Documents/_PROJECTS/IT%20Step/Auction-react-aspnet/backend/Auction.API/Controllers/LotImagesController.cs))**:
+  - Додано ендпоінт `POST /api/lots/{lotId}/images/upload` (`multipart/form-data`) з валідацією типів, розміру (до 10 МБ) та збереженням у `wwwroot/uploads/lots/`.
+  - Підключено роздачу статичних файлів через `app.UseStaticFiles()` та підтримку відносних шляхів `/uploads/...` у [LotImagesService.cs](file:///c:/Users/yural/Documents/_PROJECTS/IT%20Step/Auction-react-aspnet/backend/Auction.BLL/Services/LotImagesService.cs).
+- [x] **Профіль користувача ([UsersController.cs](file:///c:/Users/yural/Documents/_PROJECTS/IT%20Step/Auction-react-aspnet/backend/Auction.API/Controllers/UsersController.cs))**:
+  - Реалізовано ендпоінти `GET /api/users/me/bids` (усі ставки користувача з прив'язкою до лотів) та `GET /api/users/me/won-lots` (лоти, виграні користувачем).
+- [x] **SignalR Hub ([AuctionHub.cs](file:///c:/Users/yural/Documents/_PROJECTS/IT%20Step/Auction-react-aspnet/backend/Auction.API/Hubs/AuctionHub.cs))**:
+  - Створено `AuctionHub` за адресою `/hubs/auction` з групуванням клієнтів за `lot-{lotId}`.
+  - При створенні ставки у [BidsController.cs](file:///c:/Users/yural/Documents/_PROJECTS/IT%20Step/Auction-react-aspnet/backend/Auction.API/Controllers/BidsController.cs) транслюються події `ReceiveBid` (для кімнати лота) та `LotUpdated` (для всіх підключених клієнтів каталогу).
 - [x] **Уніфікація структури блокчейн-папок**:
   - Консолідовано Hardhat-проєкт у єдину папку `blockchain/` у корені (згідно з roadmap). Зайву директорію `backend/blockchain` видалено.
-- [ ] **Завантаження файлів зображень**:
-  - Фізичне завантаження локальних файлів/картинок через `multipart/form-data` замість передачі лише URL-рядка.
-- [ ] **Профіль користувача**:
-  - Додати ендпоінти `GET /api/users/me/bids` та `GET /api/users/me/won-lots`.
-- [ ] **Автентифікація**:
-  - Механізм `RefreshToken` для автоматичного оновлення сесії без перелогіну.
 
 ### 2.2. Frontend (React)
-- [x] **Галерея фото лота (`frontend/src/components/LotGallery.jsx`)**:
-  - Додано інтерактивні мініатюри та перемикання зображень лота.
-- [x] **Історія ставок на сторінці лота**:
-  - Додано повноцінну таблицю історії ставок із зазначенням учасника, суми та дати.
-- [x] **Логіка закінчення лота (`frontend/src/utils/lot.js`)**:
-  - Враховується реальний час `new Date(lot.endTime).getTime() <= Date.now()`.
-- [x] **Кнопка закриття лота продавцем**:
-  - На сторінці лота для продавця виводиться кнопка "Завершити аукціон" (`POST /api/lots/{id}/close`), якщо час закінчився.
+- [x] **SignalR WebSocket клієнт ([auctionHub.js](file:///c:/Users/yural/Documents/_PROJECTS/IT%20Step/Auction-react-aspnet/frontend/src/services/auctionHub.js))**:
+  - Інтегровано пакет `@microsoft/signalr` з автоперепідключенням та проксі у `vite.config.js`.
+  - На сторінці лота додано бейдж `LIVE`, плавне оновлення поточної ціни з пульсуючою анімацією (`price-pulse`) та додавання нових ставок без перезавантаження сторінки.
+  - На головній сторінці ціни на картках оновлюються в реальному часі при ставках інших користувачів.
+- [x] **Завантаження файлів зображень у формі створення лота ([CreateLotPage.jsx](file:///c:/Users/yural/Documents/_PROJECTS/IT%20Step/Auction-react-aspnet/frontend/src/pages/CreateLotPage.jsx))**:
+  - Інтерактивні таби вибору: `📁 Upload File` (drag-and-drop зона + миттєвий прев'ю-тумбнейл + видалення) або `🔗 Image URL`.
+- [x] **Особистий кабінет з табами ([ProfilePage.jsx](file:///c:/Users/yural/Documents/_PROJECTS/IT%20Step/Auction-react-aspnet/frontend/src/pages/ProfilePage.jsx))**:
+  - Таб 1: `My Created Lots` (сітка створених користувачем лотів).
+  - Таб 2: `My Bids` (детальна таблиця ставок з мініатюрою лота, сумою ставки, поточною ціною, статусом та переходом до лота).
+  - Таб 3: `Won Auctions` (каталог аукціонів, виграних користувачем).
+- [x] **UX ставок та депозиту**:
+  - На активному лоті показується `🥇 Top Bidder: [Username]`, а статус `🏆 Winner: [Username]` з'являється тільки після завершення аукціону.
+  - Замість напису `+Top Up` додано 4 швидкі числові кнопки підвищення ставки (`+$50`, `+$100`, `+$250`, `+$500` або кратно кроку) без текстових міток `x2/x5`.
+  - Модалка депозиту: швидкі кнопки додають суму до вже введеної (а не перезаписують її), а сума на blur автоматично форматується з копійками (`.toFixed(2)`).
+- [x] **Логіка закінчення лота та закриття продавцем**:
+  - Точний розрахунок `new Date(lot.endTime).getTime() <= Date.now()`, відображення кнопки "Close Auction & Collect Funds" (`POST /api/lots/{id}/close`) для продавця.
 
 ### 2.3. Blockchain (Hardhat & Solidity)
 - [x] **Смарт-контракт `Auction.sol` покритий тестами**:
@@ -57,36 +72,16 @@
 
 ---
 
-## 3. Що було додано з нуля
+## 3. DevOps та Контейнеризація
 
-### 3.1. Frontend
-- [x] **Модуль автентифікації та глобальний стан**:
-  - Створено [AuthContext.jsx](file:///c:/Users/yural/Documents/_PROJECTS/IT%20Step/Auction-react-aspnet/frontend/src/context/AuthContext.jsx): управління токеном, станом входу, оновленням даних юзера та балансу.
-  - Створено [AuthModal.jsx](file:///c:/Users/yural/Documents/_PROJECTS/IT%20Step/Auction-react-aspnet/frontend/src/components/AuthModal.jsx): модальне вікно входу та реєстрації.
-- [x] **Оновлений Header (`Header.jsx`)**:
-  - Відображення імені користувача, поточного балансу з кнопкою швидкого поповнення (`+`), посилань на кабінет та створення лота, кнопки виходу.
-- [x] **Модальне вікно поповнення балансу**:
-  - Створено [TopUpModal.jsx](file:///c:/Users/yural/Documents/_PROJECTS/IT%20Step/Auction-react-aspnet/frontend/src/components/TopUpModal.jsx) з швидкими кнопками (+$50, +$100, +$250, +$500) та запитом до `POST /api/users/me/balance`.
-- [x] **Особистий кабінет користувача**:
-  - Створено [ProfilePage.jsx](file:///c:/Users/yural/Documents/_PROJECTS/IT%20Step/Auction-react-aspnet/frontend/src/pages/ProfilePage.jsx) з інформацією профілю, балансом та списком виставлених лотів.
-- [x] **Сторінка створення лота**:
-  - Створено [CreateLotPage.jsx](file:///c:/Users/yural/Documents/_PROJECTS/IT%20Step/Auction-react-aspnet/frontend/src/pages/CreateLotPage.jsx) з валідацією полів, вибором категорії, тривалості, кроку ставки та додаванням фото.
-- [x] **Серверна пагінація в каталозі**:
-  - Реалізовано перемикання сторінок з відображенням загальної кількості.
-- [x] **UI-полірування (UX/Feedback)**:
-  - Індикатори завантаження (спінери), повідомлення про помилки та успіх, стилізація під основний дизайн.
-
-### 3.2. DevOps та Інфраструктура
 - [x] **`docker-compose.yml`**:
-  - Створено [docker-compose.yml](file:///c:/Users/yural/Documents/_PROJECTS/IT%20Step/Auction-react-aspnet/docker-compose.yml) для одночасного підняття PostgreSQL (порт 5432) та Ganache (порт 7545).
+  - Налаштовано підняття PostgreSQL (порт 5432) та Ganache (порт 7545).
 
 ---
 
-## 4. Наступні кроки (Future Enhancements)
+## 4. Наступні кроки (Future Roadmap)
 
-1. **SignalR (Real-time)**:
-   - Створення `AuctionHub` на бекенді для трансляції нових ставок всім підключеним клієнтам у реальному часі без необхідності ручного оновлення.
-2. **Web3 / MetaMask інтеграція**:
-   - Кнопка `Connect Wallet` у Header, підпис повідомлення для входу (SIWE: Sign-In with Ethereum), можливість робити ончейн-ставки у ETH через Ganache.
-3. **Фізичне збереження зображень**:
-   - Реалізація ендпоінта завантаження файлів (`IFormFile`) зі збереженням на сервері або в хмарному сховищі.
+1. **Web3 / MetaMask інтеграція**:
+   - Кнопка `Connect Wallet` у Header, авторизація SIWE (Sign-In with Ethereum), розміщення ончейн-ставок у ETH через локальну мережу Ganache / Hardhat.
+2. **Автентифікація: RefreshToken**:
+   - Реалізація `RefreshToken` у `Users` для прозорого оновлення доступу без виходу з системи після закінчення терміну дії JWT.
