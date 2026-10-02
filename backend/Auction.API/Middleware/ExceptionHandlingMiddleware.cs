@@ -1,4 +1,3 @@
-using Auction.BLL.Services;
 using System.ComponentModel.DataAnnotations;
 using System.Net;
 
@@ -60,10 +59,11 @@ public class ExceptionHandlingMiddleware
                       _environment.IsDevelopment()
             ? exception.Message
             : "An unexpected server error occurred.";
-        var response = ServiceResponse.Error(message, new
+        var response = new
         {
+            message,
             traceId = context.TraceIdentifier
-        });
+        };
 
         context.Response.StatusCode = statusCode;
         context.Response.ContentType = "application/json";

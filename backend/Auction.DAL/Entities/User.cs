@@ -10,8 +10,6 @@ public class User
     public string PasswordHash { get; set; } = null!;
     public UserRole Role { get; set; } = UserRole.User;
     public decimal Balance { get; set; } = 0;
-    public string? WalletAddress { get; set; }
-    public DateTime? WalletVerifiedAt { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     // Navigation properties

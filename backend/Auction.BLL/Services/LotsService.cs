@@ -1,3 +1,4 @@
+using Auction.BLL.Constants;
 using Auction.BLL.DTOs.Common;
 using Auction.BLL.DTOs.Lots;
 using Auction.DAL.Entities;
@@ -10,8 +11,6 @@ namespace Auction.BLL.Services;
 
 public class LotsService
 {
-    private const decimal MaximumStoredAmount = 9999999999999999.99m;
-
     private readonly IRepositoryWrapper _repositoryWrapper;
     private readonly IMapper _mapper;
 
@@ -77,7 +76,6 @@ public class LotsService
 
         var lot = _mapper.Map<Lot>(dto);
         lot.SellerId = sellerId;
-        lot.SettlementMode = AuctionSettlementMode.OffChain;
         lot.CurrentPrice = dto.StartingPrice;
         lot.StartTime = DateTime.UtcNow;
         lot.EndTime = NormalizeUtc(dto.EndTime);
@@ -141,12 +139,6 @@ public class LotsService
         if (lot!.Status == LotStatus.Completed)
         {
             throw new InvalidOperationException("The lot is already completed.");
-        }
-
-        if (lot.SettlementMode == AuctionSettlementMode.Blockchain)
-        {
-            throw new InvalidOperationException(
-                "Blockchain lots must be settled through the auction smart contract.");
         }
 
         if (lot.Status != LotStatus.Active)
@@ -220,12 +212,12 @@ public class LotsService
             throw new ArgumentException("Lot description cannot exceed 5000 characters.");
         }
 
-        if (dto.StartingPrice <= 0 || dto.StartingPrice > MaximumStoredAmount ||
-            dto.MinBidStep <= 0 || dto.MinBidStep > MaximumStoredAmount)
+        if (dto.StartingPrice <= 0 || dto.StartingPrice > MonetaryLimits.MaxAmount ||
+            dto.MinBidStep <= 0 || dto.MinBidStep > MonetaryLimits.MaxAmount)
         {
             throw new ArgumentOutOfRangeException(
                 nameof(dto),
-                $"Starting price and minimum bid step must be between 0.01 and {MaximumStoredAmount}.");
+                $"Starting price and minimum bid step must be between 0.01 and {MonetaryLimits.MaxAmount}.");
         }
 
         if (NormalizeUtc(dto.EndTime) <= DateTime.UtcNow)

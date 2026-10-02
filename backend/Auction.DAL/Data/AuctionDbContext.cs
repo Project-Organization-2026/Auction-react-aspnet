@@ -27,12 +27,8 @@ public class AuctionDbContext : DbContext
             entity.Property(e => e.UserName).IsRequired().HasMaxLength(256);
             entity.Property(e => e.Email).IsRequired().HasMaxLength(256);
             entity.Property(e => e.PasswordHash).IsRequired();
-            entity.Property(e => e.WalletAddress).HasMaxLength(42);
             entity.HasIndex(e => e.Email).IsUnique();
             entity.HasIndex(e => e.UserName).IsUnique();
-            entity.HasIndex(e => e.WalletAddress)
-                .IsUnique()
-                .HasFilter("\"WalletAddress\" IS NOT NULL");
         });
 
         // Category configuration
@@ -54,14 +50,6 @@ public class AuctionDbContext : DbContext
             entity.Property(e => e.StartingPrice).HasPrecision(18, 2);
             entity.Property(e => e.CurrentPrice).HasPrecision(18, 2);
             entity.Property(e => e.MinBidStep).HasPrecision(18, 2);
-            entity.Property(e => e.ContractAddress).HasMaxLength(42);
-            entity.Property(e => e.OnChainAuctionId).HasMaxLength(78);
-            entity.Property(e => e.CreationTransactionHash).HasMaxLength(66);
-            entity.Property(e => e.SettlementTransactionHash).HasMaxLength(66);
-            entity.HasIndex(e => new { e.ContractAddress, e.OnChainAuctionId })
-                .IsUnique()
-                .HasFilter(
-                    "\"ContractAddress\" IS NOT NULL AND \"OnChainAuctionId\" IS NOT NULL");
 
             // Foreign key - Seller
             entity.HasOne(e => e.Seller)
@@ -109,11 +97,6 @@ public class AuctionDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Id).ValueGeneratedOnAdd();
             entity.Property(e => e.Amount).HasPrecision(18, 2);
-            entity.Property(e => e.AmountWei).HasMaxLength(78);
-            entity.Property(e => e.TransactionHash).HasMaxLength(66);
-            entity.HasIndex(e => e.TransactionHash)
-                .IsUnique()
-                .HasFilter("\"TransactionHash\" IS NOT NULL");
 
             // Foreign key - Lot
             entity.HasOne(e => e.Lot)

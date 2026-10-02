@@ -3,13 +3,12 @@ using Auction.BLL.Services;
 using Auction.DAL.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
 
 namespace Auction.API.Controllers;
 
 [ApiController]
 [Route("api/lots")]
-public class LotsController : ControllerBase
+public class LotsController : AuctionControllerBase
 {
     private readonly LotsService _lotsService;
 
@@ -155,11 +154,5 @@ public class LotsController : ControllerBase
         {
             return Forbid();
         }
-    }
-
-    private bool TryGetUserId(out int userId)
-    {
-        var value = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        return int.TryParse(value, out userId);
     }
 }

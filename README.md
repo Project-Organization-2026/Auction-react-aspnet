@@ -45,18 +45,8 @@ These accounts are development-only and must not be used in production. Existing
 
 ## Main API endpoints
 
-Every JSON endpoint uses the same response envelope:
-
-```json
-{
-  "isSuccess": true,
-  "message": "Request completed successfully.",
-  "payload": {}
-}
-```
-
-Errors use the same shape with `isSuccess: false`. Validation details and the
-trace ID for server errors are returned inside `payload`.
+Endpoints return JSON DTOs directly. Validation failures return `400` with a
+problem-details body; server errors include a trace ID.
 
 ### Authentication
 
@@ -120,11 +110,3 @@ npm run dev
 ```
 
 The default CORS configuration allows `http://localhost:5173`. Additional frontend origins can be configured through `Cors:AllowedOrigins`.
-
-## Blockchain preparation
-
-Blockchain execution is intentionally disabled until the Hardhat/Ganache setup,
-contract and deployment artifacts are ready. Existing auctions continue to use
-the internal balance flow. See
-[`docs/blockchain-integration.md`](docs/blockchain-integration.md) for the safe
-MetaMask integration contract and remaining work.

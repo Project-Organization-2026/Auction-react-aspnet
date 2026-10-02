@@ -10,8 +10,6 @@ public class UserProfileDto
     public string Email { get; set; } = null!;
     public UserRole Role { get; set; }
     public decimal Balance { get; set; }
-    public string? WalletAddress { get; set; }
-    public DateTime? WalletVerifiedAt { get; set; }
     public DateTime CreatedAt { get; set; }
     public ICollection<LotDto> CreatedLots { get; set; } = new List<LotDto>();
 }

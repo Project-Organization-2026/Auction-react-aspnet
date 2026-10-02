@@ -1,4 +1,5 @@
-﻿using Auction.DAL.Enums;
+﻿using Auction.BLL.Constants;
+using Auction.DAL.Enums;
 
 namespace Auction.BLL.DTOs.Lots;
 
@@ -13,14 +14,14 @@ public class CreateLotDto
 
     [System.ComponentModel.DataAnnotations.Range(
         typeof(decimal),
-        "0.01",
-        "9999999999999999.99")]
+        MonetaryLimits.MinAmountString,
+        MonetaryLimits.MaxAmountString)]
     public decimal StartingPrice { get; set; }
 
     [System.ComponentModel.DataAnnotations.Range(
         typeof(decimal),
-        "0.01",
-        "9999999999999999.99")]
+        MonetaryLimits.MinAmountString,
+        MonetaryLimits.MaxAmountString)]
     public decimal MinBidStep { get; set; }
 
     public DateTime EndTime { get; set; }

@@ -47,10 +47,6 @@ public class CategoriesController : ControllerBase
             var category = await _categoriesService.CreateCategoryAsync(dto);
             return StatusCode(StatusCodes.Status201Created, category);
         }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(ex.Message);
-        }
         catch (ArgumentException ex)
         {
             return BadRequest(ex.Message);

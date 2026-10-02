@@ -2,14 +2,13 @@ using Auction.BLL.DTOs.Users;
 using Auction.BLL.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
 
 namespace Auction.API.Controllers;
 
 [ApiController]
 [Route("api/users")]
 [Authorize]
-public class UsersController : ControllerBase
+public class UsersController : AuctionControllerBase
 {
     private readonly UsersService _usersService;
 
@@ -80,11 +79,5 @@ public class UsersController : ControllerBase
         {
             return BadRequest(ex.Message);
         }
-    }
-
-    private bool TryGetUserId(out int userId)
-    {
-        var value = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        return int.TryParse(value, out userId);
     }
 }

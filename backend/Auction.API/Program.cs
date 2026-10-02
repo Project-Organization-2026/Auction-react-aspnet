@@ -1,4 +1,3 @@
-using Auction.API.Filters;
 using Auction.BLL.Services;
 using Auction.BLL.Settings;
 using Auction.DAL.Data;
@@ -31,19 +30,12 @@ builder.Services.AddScoped<AuthService>();
 // Register JWT configuration
 builder.Services.Configure<JwtSettings>(
     builder.Configuration.GetSection("JwtSettings"));
-builder.Services.Configure<BlockchainSettings>(
-    builder.Configuration.GetSection("Blockchain"));
 
 var jwtSettings = builder.Configuration
     .GetSection("JwtSettings")
     .Get<JwtSettings>() ?? new JwtSettings();
 JwtSettings.Validate(jwtSettings);
 var jwtSecretKey = jwtSettings.SecretKey;
-
-var blockchainSettings = builder.Configuration
-    .GetSection("Blockchain")
-    .Get<BlockchainSettings>() ?? new BlockchainSettings();
-BlockchainSettings.Validate(blockchainSettings);
 
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -61,24 +53,6 @@ builder.Services
             NameClaimType = ClaimTypes.NameIdentifier,
             RoleClaimType = "role"
         };
-        options.Events = new JwtBearerEvents
-        {
-            OnChallenge = async context =>
-            {
-                context.HandleResponse();
-                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-                context.Response.ContentType = "application/json";
-                await context.Response.WriteAsJsonAsync(
-                    ServiceResponse.Error("Authentication is required."));
-            },
-            OnForbidden = async context =>
-            {
-                context.Response.StatusCode = StatusCodes.Status403Forbidden;
-                context.Response.ContentType = "application/json";
-                await context.Response.WriteAsJsonAsync(
-                    ServiceResponse.Error("Access is forbidden."));
-            }
-        };
     });
 
 // Configure logging
@@ -87,31 +61,7 @@ builder.Logging.AddConsole();
 builder.Logging.AddDebug();
 
 // Add controllers and API services
-builder.Services
-    .AddControllers(options =>
-    {
-        options.Filters.Add<ServiceResponseResultFilter>();
-    })
-    .ConfigureApiBehaviorOptions(options =>
-    {
-        options.InvalidModelStateResponseFactory = context =>
-        {
-            var errors = context.ModelState
-                .Where(entry => entry.Value?.Errors.Count > 0)
-                .ToDictionary(
-                    entry => entry.Key,
-                    entry => entry.Value!.Errors
-                        .Select(error => string.IsNullOrWhiteSpace(error.ErrorMessage)
-                            ? "The supplied value is invalid."
-                            : error.ErrorMessage)
-                        .ToArray());
-
-            return new BadRequestObjectResult(
-                ServiceResponse.Error(
-                    "Request validation failed.",
-                    new { errors }));
-        };
-    });
+builder.Services.AddControllers();
 builder.Services.AddAutoMapper(
     cfg => { },
     AppDomain.CurrentDomain.GetAssemblies());
@@ -167,10 +117,16 @@ app.UseStatusCodePages(async statusContext =>
 {
     var response = statusContext.HttpContext.Response;
     response.ContentType = "application/json";
-    await response.WriteAsJsonAsync(
-        ServiceResponse.Error(
-            ServiceResponseResultFilter.GetDefaultErrorMessage(
-                response.StatusCode)));
+    await response.WriteAsJsonAsync(new
+    {
+        message = response.StatusCode switch
+        {
+            StatusCodes.Status401Unauthorized => "Authentication is required.",
+            StatusCodes.Status403Forbidden => "Access is forbidden.",
+            StatusCodes.Status404NotFound => "The requested resource was not found.",
+            _ => "Request failed."
+        }
+    });
 });
 
 // Seed initial development data
@@ -191,10 +147,10 @@ app.UseAuthorization();
 
 app.MapControllers();
 app.MapGet("/api/health", () => Results.Ok(
-    ServiceResponse.Success("API is healthy.", new
+    new
     {
         status = "Healthy",
         timestamp = DateTime.UtcNow
-    }))).AllowAnonymous();
+    })).AllowAnonymous();
 
 app.Run();

@@ -7,7 +7,7 @@ namespace Auction.Tests;
 public class MigrationDiscoveryTests
 {
     [Fact]
-    public void BlockchainAndMainImageMigrations_AreDiscoverable()
+    public void MainImageMigration_IsDiscoverable()
     {
         var options = new DbContextOptionsBuilder<AuctionDbContext>()
             .UseNpgsql(
@@ -18,7 +18,6 @@ public class MigrationDiscoveryTests
         var migrations = context.Database.GetMigrations().ToArray();
 
         Assert.Contains("20260921120000_AddUniqueMainLotImageIndex", migrations);
-        Assert.Contains("20260930120000_PrepareBlockchainIntegration", migrations);
         Assert.False(context.Database.HasPendingModelChanges());
     }
 }

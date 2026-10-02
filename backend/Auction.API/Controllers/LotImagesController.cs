@@ -2,7 +2,6 @@ using Auction.BLL.DTOs.LotImages;
 using Auction.BLL.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
 using System.ComponentModel.DataAnnotations;
 
 namespace Auction.API.Controllers;
@@ -10,7 +9,7 @@ namespace Auction.API.Controllers;
 [ApiController]
 [Route("api/lots")]
 [Authorize]
-public class LotImagesController : ControllerBase
+public class LotImagesController : AuctionControllerBase
 {
     private readonly LotImagesService _lotImagesService;
 
@@ -94,11 +93,5 @@ public class LotImagesController : ControllerBase
         {
             return Forbid();
         }
-    }
-
-    private bool TryGetUserId(out int userId)
-    {
-        var value = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        return int.TryParse(value, out userId);
     }
 }

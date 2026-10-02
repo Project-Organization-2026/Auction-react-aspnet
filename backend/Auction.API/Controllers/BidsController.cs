@@ -2,13 +2,12 @@ using Auction.BLL.DTOs.Bids;
 using Auction.BLL.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
 
 namespace Auction.API.Controllers;
 
 [ApiController]
 [Route("api")]
-public class BidsController : ControllerBase
+public class BidsController : AuctionControllerBase
 {
     private readonly BidsService _bidsService;
 
@@ -38,8 +37,7 @@ public class BidsController : ControllerBase
     [Authorize]
     public async Task<IActionResult> CreateBid([FromBody] CreateBidDto dto)
     {
-        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-        if (userIdClaim is null || !int.TryParse(userIdClaim.Value, out var userId))
+        if (!TryGetUserId(out var userId))
         {
             return Unauthorized("User ID claim is missing or invalid.");
         }

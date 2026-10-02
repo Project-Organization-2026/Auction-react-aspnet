@@ -461,3 +461,7 @@ pnpm-debug.log*
 backend/**/Storage/*
 !backend/**/Storage/.gitkeep
 !backend/**/Storage/**/.gitkeep
+
+# Hardhat (blockchain/): generated compilation and local-network data
+blockchain/artifacts/
+blockchain/cache/

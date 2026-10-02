@@ -1,3 +1,4 @@
+using Auction.BLL.Constants;
 using Auction.BLL.DTOs.Bids;
 using Auction.BLL.DTOs.Common;
 using Auction.DAL.Entities;
@@ -10,8 +11,6 @@ namespace Auction.BLL.Services;
 
 public class BidsService
 {
-    private const decimal MaximumStoredAmount = 9999999999999999.99m;
-
     private readonly IRepositoryWrapper _repositoryWrapper;
     private readonly IMapper _mapper;
 
@@ -54,11 +53,11 @@ public class BidsService
 
     public async Task<BidDto> CreateBidAsync(CreateBidDto dto, int userId)
     {
-        if (dto.Amount <= 0 || dto.Amount > MaximumStoredAmount)
+        if (dto.Amount <= 0 || dto.Amount > MonetaryLimits.MaxAmount)
         {
             throw new ArgumentOutOfRangeException(
                 nameof(dto),
-                $"Bid amount must be between 0.01 and {MaximumStoredAmount}.");
+                $"Bid amount must be between 0.01 and {MonetaryLimits.MaxAmount}.");
         }
 
         await using var transaction = await _repositoryWrapper.BeginTransactionAsync();
@@ -72,12 +71,6 @@ public class BidsService
         if (lot.Status != LotStatus.Active || DateTime.UtcNow >= lot.EndTime)
         {
             throw new InvalidOperationException($"Lot with ID {dto.LotId} is closed.");
-        }
-
-        if (lot.SettlementMode == AuctionSettlementMode.Blockchain)
-        {
-            throw new InvalidOperationException(
-                "Blockchain lot bids must be submitted through the auction smart contract.");
         }
 
         if (lot.SellerId == userId)

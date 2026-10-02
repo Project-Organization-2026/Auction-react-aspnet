@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using Microsoft.AspNetCore.Cryptography.KeyDerivation;
 
 namespace Auction.BLL.Services;
 
@@ -14,11 +15,11 @@ public static class PasswordService
         ArgumentException.ThrowIfNullOrWhiteSpace(password);
 
         var salt = RandomNumberGenerator.GetBytes(SaltSize);
-        var hash = Rfc2898DeriveBytes.Pbkdf2(
+        var hash = KeyDerivation.Pbkdf2(
             password,
             salt,
+            KeyDerivationPrf.HMACSHA256,
             Iterations,
-            HashAlgorithmName.SHA256,
             HashSize);
 
         return string.Join(
@@ -49,11 +50,11 @@ public static class PasswordService
         {
             var salt = Convert.FromBase64String(parts[2]);
             var expectedHash = Convert.FromBase64String(parts[3]);
-            var actualHash = Rfc2898DeriveBytes.Pbkdf2(
+            var actualHash = KeyDerivation.Pbkdf2(
                 password,
                 salt,
+                KeyDerivationPrf.HMACSHA256,
                 iterations,
-                HashAlgorithmName.SHA256,
                 expectedHash.Length);
 
             return CryptographicOperations.FixedTimeEquals(actualHash, expectedHash);

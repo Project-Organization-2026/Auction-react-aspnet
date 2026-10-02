@@ -34,22 +34,11 @@ namespace Auction.DAL.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
 
-                    b.Property<string>("AmountWei")
-                        .HasMaxLength(78)
-                        .HasColumnType("character varying(78)");
-
-                    b.Property<long?>("BlockNumber")
-                        .HasColumnType("bigint");
-
                     b.Property<int>("LotId")
                         .HasColumnType("integer");
 
                     b.Property<DateTime>("PlacedAt")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("TransactionHash")
-                        .HasMaxLength(66)
-                        .HasColumnType("character varying(66)");
 
                     b.Property<int>("UserId")
                         .HasColumnType("integer");
@@ -59,10 +48,6 @@ namespace Auction.DAL.Migrations
                     b.HasIndex("UserId");
 
                     b.HasIndex("LotId", "PlacedAt");
-
-                    b.HasIndex("TransactionHash")
-                        .IsUnique()
-                        .HasFilter("\"TransactionHash\" IS NOT NULL");
 
                     b.ToTable("Bids");
                 });
@@ -101,19 +86,8 @@ namespace Auction.DAL.Migrations
                     b.Property<int?>("CategoryId")
                         .HasColumnType("integer");
 
-                    b.Property<long?>("ChainId")
-                        .HasColumnType("bigint");
-
-                    b.Property<string>("ContractAddress")
-                        .HasMaxLength(42)
-                        .HasColumnType("character varying(42)");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("CreationTransactionHash")
-                        .HasMaxLength(66)
-                        .HasColumnType("character varying(66)");
 
                     b.Property<decimal>("CurrentPrice")
                         .HasPrecision(18, 2)
@@ -131,19 +105,8 @@ namespace Auction.DAL.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
 
-                    b.Property<string>("OnChainAuctionId")
-                        .HasMaxLength(78)
-                        .HasColumnType("character varying(78)");
-
                     b.Property<int>("SellerId")
                         .HasColumnType("integer");
-
-                    b.Property<int>("SettlementMode")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("SettlementTransactionHash")
-                        .HasMaxLength(66)
-                        .HasColumnType("character varying(66)");
 
                     b.Property<DateTime>("StartTime")
                         .HasColumnType("timestamp with time zone");
@@ -166,10 +129,6 @@ namespace Auction.DAL.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CategoryId");
-
-                    b.HasIndex("ContractAddress", "OnChainAuctionId")
-                        .IsUnique()
-                        .HasFilter("\"ContractAddress\" IS NOT NULL AND \"OnChainAuctionId\" IS NOT NULL");
 
                     b.HasIndex("SellerId");
 
@@ -242,13 +201,6 @@ namespace Auction.DAL.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
-                    b.Property<string>("WalletAddress")
-                        .HasMaxLength(42)
-                        .HasColumnType("character varying(42)");
-
-                    b.Property<DateTime?>("WalletVerifiedAt")
-                        .HasColumnType("timestamp with time zone");
-
                     b.HasKey("Id");
 
                     b.HasIndex("Email")
@@ -256,10 +208,6 @@ namespace Auction.DAL.Migrations
 
                     b.HasIndex("UserName")
                         .IsUnique();
-
-                    b.HasIndex("WalletAddress")
-                        .IsUnique()
-                        .HasFilter("\"WalletAddress\" IS NOT NULL");
 
                     b.ToTable("Users");
                 });
