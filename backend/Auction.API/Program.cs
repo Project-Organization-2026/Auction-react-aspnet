@@ -1,3 +1,4 @@
+using Auction.API.HostedServices;
 using Auction.BLL.Services;
 using Auction.BLL.Settings;
 using Auction.DAL.Data;
@@ -26,6 +27,7 @@ builder.Services.AddScoped<LotImagesService>();
 builder.Services.AddScoped<CategoriesService>();
 builder.Services.AddScoped<UsersService>();
 builder.Services.AddScoped<AuthService>();
+builder.Services.AddHostedService<AuctionExpirationWorker>();
 
 // Register JWT configuration
 builder.Services.Configure<JwtSettings>(
