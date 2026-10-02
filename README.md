@@ -45,8 +45,10 @@ These accounts are development-only and must not be used in production. Existing
 
 ## Main API endpoints
 
-Endpoints return JSON DTOs directly. Validation failures return `400` with a
-problem-details body; server errors include a trace ID.
+Endpoints return JSON DTOs directly. Model-validation failures return `400`
+with a problem-details body. Business-rule rejections (for example, a bid
+below the minimum step) return `400` with a plain message string. Server
+errors include a trace ID.
 
 ### Authentication
 

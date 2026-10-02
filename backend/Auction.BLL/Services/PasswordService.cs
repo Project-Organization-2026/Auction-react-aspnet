@@ -7,7 +7,7 @@ public static class PasswordService
 {
     private const int SaltSize = 16;
     private const int HashSize = 32;
-    private const int Iterations = 100_000;
+    private const int Iterations = 600_000;
     private const string Algorithm = "pbkdf2-sha256";
 
     public static string HashPassword(string password)

@@ -90,6 +90,7 @@ public class UsersService
                 "Top-up amount must be greater than zero.");
         }
 
+        await using var transaction = await _repositoryWrapper.BeginTransactionAsync();
         var user = await _repositoryWrapper.UsersRepository.GetForUpdateAsync(userId);
         if (user is null)
         {
@@ -105,6 +106,7 @@ public class UsersService
 
         user.Balance += amount;
         await _repositoryWrapper.SaveChangesAsync();
+        await transaction.CommitAsync();
 
         return user.Balance;
     }

@@ -1,10 +1,12 @@
-# Blockchain
+# Blockchain (planned)
 
-Hardhat-проєкт живе в цій папці (issue #42):
+This folder will host the Hardhat project (issue #42):
 
-- `contracts/` — Solidity-контракти (`Auction.sol`, issue #43);
-- `scripts/deploy.js` — деплой у Ganache + експорт адреси й ABI
-  у `frontend/src/contracts/` (issue #44);
-- `hardhat.config.js` — підключення до локальної мережі Ganache (порт 7545).
+- `contracts/` — future Solidity contracts (`Auction.sol`, issue #43);
+- `scripts/deploy.js` — future deploy to Ganache plus address and ABI
+  export into `frontend/src/contracts/` (issue #44);
+- `hardhat.config.js` — future connection to the local Ganache network
+  (port 7545).
 
-Згенеровані `artifacts/` і `cache/` в гіт не комітяться (див. кореневий `.gitignore`).
+Generated `artifacts/` and `cache/` are not committed (see the root
+`.gitignore`).

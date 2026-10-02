@@ -103,12 +103,14 @@ public class LotsRepository : RepositoryBase<Lot>, ILotsRepository
 
     private static IQueryable<Lot> AddDetails(IQueryable<Lot> query)
     {
+        // Note: bid history is intentionally not loaded here. The paged
+        // catalog only needs LotDto data, and loading every bid per lot
+        // makes anonymous catalog requests expensive.
         return query
             .Include(lot => lot.Seller)
             .Include(lot => lot.Winner)
             .Include(lot => lot.Category)
             .Include(lot => lot.Images)
-            .Include(lot => lot.Bids)
             .AsSplitQuery();
     }
 }

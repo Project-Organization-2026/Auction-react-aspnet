@@ -121,12 +121,18 @@ public class LotsService
             asNoTracking: false);
         EnsureOwner(lot, userId);
 
-        if (lot!.Bids.Count != 0)
+        var hasBids = await _repositoryWrapper.BidsRepository.AnyAsync(
+            new QueryOptions<Bid>
+            {
+                Filter = bid => bid.LotId == id,
+                AsNoTracking = true
+            });
+        if (hasBids)
         {
             throw new InvalidOperationException("A lot with bids cannot be deleted.");
         }
 
-        _repositoryWrapper.LotsRepository.Delete(lot);
+        _repositoryWrapper.LotsRepository.Delete(lot!);
         await _repositoryWrapper.SaveChangesAsync();
     }
 
