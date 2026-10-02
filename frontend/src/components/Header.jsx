@@ -1,24 +1,17 @@
-const Header = () => {
-  return (
+import { useLocation } from "react-router-dom";
+
+function Header() {
+  const { pathname } = useLocation();
+  return <>
+    <div className="announcement">Discover lots from our live auctions</div>
     <header className="site-header">
-      <a className="brand" href="#top">
-        <span className="brand-accent">best</span>
-        <span>auction</span>
-      </a>
-      <button className="menu-button">Menu</button>
-      <div className="search-box">
-        <span>⌕</span>
-        <input aria-label="Search" placeholder="Search" />
-      </div>
-      <button className="header-filter">⌖ Current</button>
-      <button className="header-filter">♧ 100 miles</button>
-      <button className="search-submit" aria-label="Submit search">⌕</button>
-      <div className="header-actions">
-        <button aria-label="Account">♙</button>
-        <button aria-label="Wishlist">♡</button>
+      <div className="site-header__inner">
+        <a className="brand" href="/" aria-label="Bestauction home"><span className="brand-mark">+</span><span>bestauction</span></a>
+        <nav className="main-nav" aria-label="Main navigation"><a href="/#auctions" aria-current={pathname === "/" ? "page" : undefined}>Auctions</a></nav>
+        <a className="header-cta" href="/#auctions">Explore auctions</a>
       </div>
     </header>
-  );
-};
+  </>;
+}
 
 export default Header;
