@@ -48,6 +48,9 @@ export function AuthProvider({ children }) {
     const jwt = data?.accessToken || data?.token;
     if (jwt) {
       localStorage.setItem("token", jwt);
+      if (data.refreshToken) {
+        localStorage.setItem("refreshToken", data.refreshToken);
+      }
       setToken(jwt);
       if (data.user) {
         setUser(data.user);
@@ -64,6 +67,9 @@ export function AuthProvider({ children }) {
     const jwt = data?.accessToken || data?.token;
     if (jwt) {
       localStorage.setItem("token", jwt);
+      if (data.refreshToken) {
+        localStorage.setItem("refreshToken", data.refreshToken);
+      }
       setToken(jwt);
       if (data.user) {
         setUser(data.user);
@@ -75,8 +81,14 @@ export function AuthProvider({ children }) {
     throw new Error("No access token received from server");
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await authApi.revoke();
+    } catch (e) {
+      // Ignore errors when revoking
+    }
     localStorage.removeItem("token");
+    localStorage.removeItem("refreshToken");
     setToken(null);
     setUser(null);
   };

@@ -36,6 +36,14 @@ builder.Services.AddScoped<AuthService>();
 builder.Services.AddHostedService<AuctionExpirationWorker>();
 builder.Services.AddSignalR();
 
+// Ethereum integration: named HttpClient used by EthereumService
+// (one client hits CoinGecko; RPC node URL is read from env inside the service)
+builder.Services.AddHttpClient<EthereumService>(client =>
+{
+    client.DefaultRequestHeaders.Add("Accept", "application/json");
+    client.DefaultRequestHeaders.Add("User-Agent", "BestAuction/1.0");
+});
+
 // Register JWT configuration
 builder.Services.Configure<JwtSettings>(
     builder.Configuration.GetSection("JwtSettings"));

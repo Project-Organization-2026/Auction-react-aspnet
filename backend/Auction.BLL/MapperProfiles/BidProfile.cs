@@ -9,7 +9,12 @@ public class BidProfile : Profile
     public BidProfile()
     {
         CreateMap<Bid, BidDto>()
-            .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.User != null ? src.User.UserName : null));
+            .ForMember(dest => dest.UserName, opt => opt.MapFrom(src =>
+                src.User != null
+                    ? src.User.UserName
+                    : (src.WalletAddress != null && src.WalletAddress.Length >= 10
+                        ? "0x" + src.WalletAddress.Substring(2, 4) + "..." + src.WalletAddress.Substring(src.WalletAddress.Length - 4)
+                        : null)));
         CreateMap<Bid, UserBidDto>()
             .ForMember(dest => dest.LotTitle, opt => opt.MapFrom(src => src.Lot.Title))
             .ForMember(dest => dest.LotCurrentPrice, opt => opt.MapFrom(src => src.Lot.CurrentPrice))

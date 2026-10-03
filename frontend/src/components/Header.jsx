@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import { formatPrice } from "../utils/format";
 import AuthModal from "./AuthModal";
 import TopUpModal from "./TopUpModal";
+import WalletButton from "./WalletButton";
 
 function Header() {
   const { pathname } = useLocation();
@@ -54,6 +55,8 @@ function Header() {
           </nav>
 
           <div className="header-actions">
+            <WalletButton />
+
             {isAuthenticated ? (
               <div className="header-user-badge">
                 <button

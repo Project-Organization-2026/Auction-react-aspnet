@@ -4,7 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "hardhat test",
+    "deploy": "hardhat run scripts/deploy.ts",
+    "fund": "hardhat run scripts/fund.ts"
   },
   "keywords": [],
   "author": "",
@@ -21,7 +23,6 @@
     "@types/node": "^22.20.5",
     "chai": "^6.3.0",
     "ethers": "^6.17.0",
-    "forge-std": "github:foundry-rs/forge-std#v1.16.2",
     "hardhat": "^3.18.1",
     "mocha": "^12.0.3",
     "typescript": "~6.0.3"

@@ -49,3 +49,75 @@ export function getErrorMessage(err, defaultMessage = "An error occurred. Please
 
   return defaultMessage;
 }
+
+/**
+ * Extracts a user-friendly message from Web3 / Ethers.js / RPC errors.
+ * Formats INSUFFICIENT_FUNDS, gas estimation failures, user rejections,
+ * smart contract custom errors, and RPC connection drops into clear English.
+ */
+export function formatWeb3Error(err, defaultMessage = "Failed to execute on-chain transaction.") {
+  if (!err) return defaultMessage;
+
+  const rawMessage = String(err.message || "");
+  const code = err.code || err.info?.error?.code || err.error?.code;
+  const innerMsg = err.info?.error?.message || err.error?.message || "";
+  const combined = `${rawMessage} ${innerMsg}`.toLowerCase();
+
+  // 1. Insufficient funds for gas or bid value
+  if (
+    code === "INSUFFICIENT_FUNDS" ||
+    code === -32000 ||
+    combined.includes("insufficient funds")
+  ) {
+    return "Insufficient ETH in your wallet to cover the bid amount and network gas fee. Please top up your wallet with test ETH.";
+  }
+
+  // 2. User rejected transaction in MetaMask
+  if (
+    code === "ACTION_REJECTED" ||
+    code === 4001 ||
+    combined.includes("user rejected") ||
+    combined.includes("user denied")
+  ) {
+    return "Transaction was cancelled in MetaMask.";
+  }
+
+  // 3. Smart contract revert / custom errors
+  if (code === "CALL_EXCEPTION" || combined.includes("execution reverted")) {
+    if (combined.includes("bidnothighenough")) {
+      return "Your ETH bid must be strictly higher than the current highest bid.";
+    }
+    if (combined.includes("auctioalreadyended") || combined.includes("auctionnotyetended")) {
+      return "This auction has already ended.";
+    }
+    if (combined.includes("transferfailed")) {
+      return "Smart contract failed to transfer ETH.";
+    }
+    if (err.reason) {
+      return `Smart contract error: ${err.reason}`;
+    }
+    return "Transaction reverted by smart contract.";
+  }
+
+  // 4. Local node / RPC connection failure
+  if (
+    combined.includes("failed to fetch") ||
+    combined.includes("network error") ||
+    combined.includes("could not detect network")
+  ) {
+    return "Could not connect to the Ethereum node. Please verify that your local node (Ganache / Hardhat) is running.";
+  }
+
+  // 5. Short message fallback
+  if (err.shortMessage) {
+    return err.shortMessage;
+  }
+
+  // If message contains long debug data like (transaction={...}), strip it
+  const parenIdx = rawMessage.indexOf("(");
+  if (parenIdx > 0 && parenIdx < 100) {
+    return rawMessage.substring(0, parenIdx).trim();
+  }
+
+  return rawMessage.length > 160 ? `${rawMessage.slice(0, 160)}...` : rawMessage || defaultMessage;
+}

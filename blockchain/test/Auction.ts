@@ -78,7 +78,7 @@ describe("Auction Smart Contract", function () {
 
       expect(await auction.pendingReturns(bidder1.address)).to.equal(1500n);
 
-      await expect(auction.connect(bidder1).withdraw()).to.not.be.reverted;
+      await auction.connect(bidder1).withdraw();
       expect(await auction.pendingReturns(bidder1.address)).to.equal(0n);
     });
   });

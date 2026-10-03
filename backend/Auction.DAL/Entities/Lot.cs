@@ -9,6 +9,8 @@ public class Lot
     public string Description { get; set; } = string.Empty;
     public decimal StartingPrice { get; set; }
     public decimal CurrentPrice { get; set; }
+    public decimal? CurrentPriceEth { get; set; }
+    public string? ContractAddress { get; set; }
     public decimal MinBidStep { get; set; }
     public DateTime StartTime { get; set; }
     public DateTime EndTime { get; set; }

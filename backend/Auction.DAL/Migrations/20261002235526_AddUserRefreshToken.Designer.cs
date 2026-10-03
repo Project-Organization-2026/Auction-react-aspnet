@@ -3,6 +3,7 @@ using System;
 using Auction.DAL.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Auction.DAL.Migrations
 {
     [DbContext(typeof(AuctionDbContext))]
-    partial class AuctionDbContextModelSnapshot : ModelSnapshot
+    [Migration("20261002235526_AddUserRefreshToken")]
+    partial class AddUserRefreshToken
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -34,35 +37,16 @@ namespace Auction.DAL.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
 
-                    b.Property<decimal?>("AmountEth")
-                        .HasPrecision(18, 6)
-                        .HasColumnType("numeric(18,6)");
-
-                    b.Property<int>("Currency")
-                        .HasColumnType("integer");
-
                     b.Property<int>("LotId")
                         .HasColumnType("integer");
 
                     b.Property<DateTime>("PlacedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("TxHash")
-                        .HasMaxLength(66)
-                        .HasColumnType("character varying(66)");
-
-                    b.Property<int?>("UserId")
+                    b.Property<int>("UserId")
                         .HasColumnType("integer");
 
-                    b.Property<string>("WalletAddress")
-                        .HasMaxLength(42)
-                        .HasColumnType("character varying(42)");
-
                     b.HasKey("Id");
-
-                    b.HasIndex("TxHash")
-                        .IsUnique()
-                        .HasFilter("\"TxHash\" IS NOT NULL");
 
                     b.HasIndex("UserId");
 
@@ -108,20 +92,12 @@ namespace Auction.DAL.Migrations
                     b.Property<int?>("CategoryId")
                         .HasColumnType("integer");
 
-                    b.Property<string>("ContractAddress")
-                        .HasMaxLength(42)
-                        .HasColumnType("character varying(42)");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<decimal>("CurrentPrice")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
-
-                    b.Property<decimal?>("CurrentPriceEth")
-                        .HasPrecision(18, 6)
-                        .HasColumnType("numeric(18,6)");
 
                     b.Property<string>("Description")
                         .IsRequired()
@@ -236,10 +212,6 @@ namespace Auction.DAL.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
-                    b.Property<string>("WalletAddress")
-                        .HasMaxLength(42)
-                        .HasColumnType("character varying(42)");
-
                     b.HasKey("Id");
 
                     b.HasIndex("Email")
@@ -262,7 +234,8 @@ namespace Auction.DAL.Migrations
                     b.HasOne("Auction.DAL.Entities.User", "User")
                         .WithMany("Bids")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("Lot");
 

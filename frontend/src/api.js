@@ -13,14 +13,89 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response?.status === 401 && localStorage.getItem("token")) {
-      // Token is expired or invalid
-      localStorage.removeItem("token");
-      window.dispatchEvent(new Event("auth:logout"));
+  async (error) => {
+    const originalRequest = error.config;
+
+    if (
+      error.response?.status === 401 &&
+      originalRequest &&
+      !originalRequest._retry &&
+      !originalRequest.url?.includes("/auth/login") &&
+      !originalRequest.url?.includes("/auth/register") &&
+      !originalRequest.url?.includes("/auth/refresh")
+    ) {
+      const accessToken = localStorage.getItem("token");
+      const refreshToken = localStorage.getItem("refreshToken");
+
+      if (!refreshToken) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("refreshToken");
+        window.dispatchEvent(new Event("auth:logout"));
+        return Promise.reject(error);
+      }
+
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        })
+          .then((token) => {
+            originalRequest.headers.Authorization = `Bearer ${token}`;
+            return api(originalRequest);
+          })
+          .catch((err) => Promise.reject(err));
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      try {
+        const response = await axios.post(`${env.apiUrl}/auth/refresh`, {
+          accessToken,
+          refreshToken,
+        });
+
+        const newAccessToken = response.data?.accessToken;
+        const newRefreshToken = response.data?.refreshToken;
+
+        if (newAccessToken) {
+          localStorage.setItem("token", newAccessToken);
+          if (newRefreshToken) {
+            localStorage.setItem("refreshToken", newRefreshToken);
+          }
+          api.defaults.headers.common["Authorization"] = `Bearer ${newAccessToken}`;
+          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+          processQueue(null, newAccessToken);
+          return api(originalRequest);
+        } else {
+          throw new Error("No access token returned from refresh endpoint.");
+        }
+      } catch (refreshError) {
+        processQueue(refreshError, null);
+        localStorage.removeItem("token");
+        localStorage.removeItem("refreshToken");
+        window.dispatchEvent(new Event("auth:logout"));
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
+      }
     }
+
     return Promise.reject(error);
   }
 );
@@ -28,11 +103,19 @@ api.interceptors.response.use(
 export const authApi = {
   login: async (email, password) => {
     const res = await api.post("/auth/login", { email, password });
-    return res.data; // { token }
+    return res.data; // { accessToken, refreshToken, user }
   },
   register: async (userName, email, password) => {
     const res = await api.post("/auth/register", { userName, email, password });
-    return res.data; // { token }
+    return res.data; // { accessToken, refreshToken, user }
+  },
+  refresh: async (accessToken, refreshToken) => {
+    const res = await axios.post(`${env.apiUrl}/auth/refresh`, { accessToken, refreshToken });
+    return res.data;
+  },
+  revoke: async () => {
+    const res = await api.post("/auth/revoke");
+    return res.data;
   },
 };
 
@@ -140,5 +223,15 @@ export const bidsApi = {
       amount: Number(amount),
     });
     return res.data;
+  },
+  /** Register an already-confirmed on-chain ETH bid on the platform backend. */
+  createOnChain: async ({ lotId, txHash, amountEth, walletAddress }) => {
+    const res = await api.post("/bids/on-chain", {
+      lotId: Number(lotId),
+      txHash,
+      amountEth: Number(amountEth),
+      walletAddress,
+    });
+    return res.data; // BidDto
   },
 };

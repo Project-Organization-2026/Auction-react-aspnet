@@ -80,4 +80,61 @@ public class BidsController : AuctionControllerBase
             return BadRequest(ex.Message);
         }
     }
+
+    /// <summary>
+    /// Registers an already-confirmed on-chain ETH bid into the platform database.
+    /// The transaction is verified against the Ethereum node before being accepted.
+    /// Requires authentication — the bid is linked to the logged-in user account.
+    /// </summary>
+    [HttpPost("bids/on-chain")]
+    [Authorize]
+    public async Task<IActionResult> CreateOnChainBid([FromBody] CreateOnChainBidDto dto)
+    {
+        if (!TryGetUserId(out var userId))
+        {
+            return Unauthorized("You must be logged in to place an ETH bid.");
+        }
+
+        try
+        {
+            var bid = await _bidsService.CreateOnChainBidAsync(dto, userId);
+
+            if (_hubContext != null)
+            {
+                // Notify users watching this specific lot
+                await _hubContext.Clients.Group($"lot-{dto.LotId}")
+                    .SendAsync("ReceiveBid", bid);
+
+                // Notify catalogue: pass ETH price for display
+                await _hubContext.Clients.All
+                    .SendAsync("LotUpdated", new
+                    {
+                        lotId = dto.LotId,
+                        currentPrice = bid.Amount,        // USD equivalent
+                        currentPriceEth = bid.AmountEth,  // raw ETH
+                        currency = "ETH",
+                        winnerId = userId,
+                        userName = bid.UserName ?? $"User #{userId}"
+                    });
+            }
+
+            return CreatedAtRoute("GetBidsByLotId", new { lotId = dto.LotId }, bid);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Unauthorized(ex.Message);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ex.Message);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (HttpRequestException)
+        {
+            return StatusCode(502, "Unable to communicate with the Ethereum node. Please try again.");
+        }
+    }
 }
