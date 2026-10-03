@@ -49,7 +49,9 @@ public class AuthService
             Email = email,
             PasswordHash = PasswordService.HashPassword(dto.Password),
             Role = UserRole.User,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            RefreshToken = _jwtService.GenerateRefreshToken(),
+            RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7)
         };
 
         await _repositoryWrapper.UsersRepository.CreateAsync(user);
@@ -88,7 +90,66 @@ public class AuthService
             throw new UnauthorizedAccessException("Invalid email or password.");
         }
 
+        user.RefreshToken = _jwtService.GenerateRefreshToken();
+        user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7);
+        _repositoryWrapper.UsersRepository.Update(user);
+        await _repositoryWrapper.SaveChangesAsync();
+
         return CreateResponse(user);
+    }
+
+    public async Task<AuthResponseDto> RefreshTokenAsync(RefreshTokenRequestDto dto)
+    {
+        if (string.IsNullOrWhiteSpace(dto.AccessToken) || string.IsNullOrWhiteSpace(dto.RefreshToken))
+        {
+            throw new ValidationException("Access token and refresh token are required.");
+        }
+
+        var principal = _jwtService.GetPrincipalFromExpiredToken(dto.AccessToken);
+        if (principal is null)
+        {
+            throw new UnauthorizedAccessException("Invalid access token.");
+        }
+
+        var userIdClaim = principal.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(userIdClaim, out var userId))
+        {
+            throw new UnauthorizedAccessException("Invalid user claim in token.");
+        }
+
+        await using var transaction = await _repositoryWrapper.BeginTransactionAsync();
+        var user = await _repositoryWrapper.UsersRepository.GetForUpdateAsync(userId);
+        if (user is null)
+        {
+            throw new UnauthorizedAccessException("User not found.");
+        }
+
+        if (user.RefreshToken != dto.RefreshToken ||
+            user.RefreshTokenExpiryTime == null ||
+            user.RefreshTokenExpiryTime <= DateTime.UtcNow)
+        {
+            throw new UnauthorizedAccessException("Invalid or expired refresh token.");
+        }
+
+        user.RefreshToken = _jwtService.GenerateRefreshToken();
+        user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7);
+        await _repositoryWrapper.SaveChangesAsync();
+        await transaction.CommitAsync();
+
+        return CreateResponse(user);
+    }
+
+    public async Task RevokeRefreshTokenAsync(int userId)
+    {
+        await using var transaction = await _repositoryWrapper.BeginTransactionAsync();
+        var user = await _repositoryWrapper.UsersRepository.GetForUpdateAsync(userId);
+        if (user != null)
+        {
+            user.RefreshToken = null;
+            user.RefreshTokenExpiryTime = null;
+            await _repositoryWrapper.SaveChangesAsync();
+            await transaction.CommitAsync();
+        }
     }
 
     private AuthResponseDto CreateResponse(User user)
@@ -96,6 +157,7 @@ public class AuthService
         return new AuthResponseDto
         {
             AccessToken = _jwtService.GetAccessToken(user),
+            RefreshToken = user.RefreshToken,
             User = _mapper.Map<UserSummaryDto>(user)
         };
     }

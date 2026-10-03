@@ -184,6 +184,55 @@ public class LotsService
         return await GetByIdAsync(id);
     }
 
+    public async Task<int> CloseExpiredLotsAsync()
+    {
+        var expiredLots = await _repositoryWrapper.LotsRepository.GetAllAsync(
+            new QueryOptions<Lot>
+            {
+                Filter = lot => lot.Status == LotStatus.Active && lot.EndTime <= DateTime.UtcNow,
+                AsNoTracking = true
+            });
+
+        var closedCount = 0;
+        foreach (var expired in expiredLots)
+        {
+            try
+            {
+                await using var transaction = await _repositoryWrapper.BeginTransactionAsync();
+                var lot = await _repositoryWrapper.LotsRepository.GetForUpdateAsync(expired.Id);
+                if (lot is null || lot.Status != LotStatus.Active || DateTime.UtcNow < lot.EndTime)
+                {
+                    continue;
+                }
+
+                var winningBid = await _repositoryWrapper.BidsRepository.GetHighestByLotIdAsync(lot.Id);
+                if (winningBid is not null)
+                {
+                    var seller = await _repositoryWrapper.UsersRepository.GetForUpdateAsync(lot.SellerId);
+                    if (seller is not null)
+                    {
+                        if (seller.Balance <= decimal.MaxValue - winningBid.Amount)
+                        {
+                            seller.Balance += winningBid.Amount;
+                        }
+                        lot.WinnerId = winningBid.UserId;
+                    }
+                }
+
+                lot.Status = LotStatus.Completed;
+                await _repositoryWrapper.SaveChangesAsync();
+                await transaction.CommitAsync();
+                closedCount++;
+            }
+            catch (Exception)
+            {
+                // Continue closing remaining lots
+            }
+        }
+
+        return closedCount;
+    }
+
     private async Task EnsureCategoryExistsAsync(int? categoryId)
     {
         if (!categoryId.HasValue)

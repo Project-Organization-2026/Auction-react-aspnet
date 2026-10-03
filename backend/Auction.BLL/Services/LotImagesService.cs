@@ -28,11 +28,13 @@ public class LotImagesService
             throw new ValidationException("Image URL is required.");
         }
 
-        if (!Uri.TryCreate(dto.Url, UriKind.Absolute, out var imageUri) ||
-            (imageUri.Scheme != Uri.UriSchemeHttp &&
-             imageUri.Scheme != Uri.UriSchemeHttps))
+        var isRelativeUpload = dto.Url.StartsWith("/uploads/", StringComparison.OrdinalIgnoreCase);
+        if (!isRelativeUpload &&
+            (!Uri.TryCreate(dto.Url, UriKind.Absolute, out var imageUri) ||
+             (imageUri.Scheme != Uri.UriSchemeHttp &&
+              imageUri.Scheme != Uri.UriSchemeHttps)))
         {
-            throw new ValidationException("Image URL must be an absolute HTTP or HTTPS URL.");
+            throw new ValidationException("Image URL must be an absolute HTTP or HTTPS URL or an uploaded path.");
         }
 
         await using var transaction = await _repositoryWrapper.BeginTransactionAsync();

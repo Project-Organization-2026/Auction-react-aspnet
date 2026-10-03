@@ -1,4 +1,4 @@
-﻿using Auction.DAL.Data;
+using Auction.DAL.Data;
 using Auction.DAL.Initializer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -48,6 +48,8 @@ public static class DatabaseExtensions
                         "Development user and lot seeds were skipped because DevelopmentSeed:Password is unset.");
                 }
             }
+
+            await AdminDataSeeder.SeedAsync(context, configuration, hashPassword, logger);
         }
         catch (Exception ex)
         {

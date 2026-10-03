@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: bestauction_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
+      POSTGRES_DB: auction_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  ganache:
+    image: trufflesuite/ganache:latest
+    container_name: bestauction_ganache
+    restart: always
+    ports:
+      - "7545:7545"
+    command: ["--wallet.defaultBalance", "1000", "--miner.blockTime", "0", "--server.port", "7545", "--server.host", "0.0.0.0"]
+
+volumes:
+  postgres_data:

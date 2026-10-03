@@ -11,4 +11,6 @@ public interface IBidsRepository : IRepositoryBase<Bid>
         int lotId,
         int page,
         int pageSize);
+
+    Task<IReadOnlyList<Bid>> GetByUserIdAsync(int userId);
 }

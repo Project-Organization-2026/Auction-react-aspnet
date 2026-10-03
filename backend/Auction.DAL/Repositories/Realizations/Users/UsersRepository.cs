@@ -1,4 +1,4 @@
-﻿using Auction.DAL.Data;
+using Auction.DAL.Data;
 using Auction.DAL.Entities;
 using Auction.DAL.Repositories.Realizations.Base;
 using Auction.DAL.Repositories.Interfaces.Users;
@@ -16,13 +16,11 @@ public class UsersRepository : RepositoryBase<User>, IUsersRepository
         _context = context;
     }
 
-    public Task<User?> GetProfileByIdAsync(int userId)
+    public async Task<User?> GetProfileByIdAsync(int userId)
     {
-        return _context.Users
+        var user = await _context.Users
             .AsNoTracking()
             .AsSplitQuery()
-            .Include(user => user.CreatedLots)
-                .ThenInclude(lot => lot.Seller)
             .Include(user => user.CreatedLots)
                 .ThenInclude(lot => lot.Winner)
             .Include(user => user.CreatedLots)
@@ -30,6 +28,16 @@ public class UsersRepository : RepositoryBase<User>, IUsersRepository
             .Include(user => user.CreatedLots)
                 .ThenInclude(lot => lot.Images)
             .SingleOrDefaultAsync(user => user.Id == userId);
+
+        if (user != null)
+        {
+            foreach (var lot in user.CreatedLots)
+            {
+                lot.Seller = user;
+            }
+        }
+
+        return user;
     }
 
     public Task<User?> GetForUpdateAsync(int userId)

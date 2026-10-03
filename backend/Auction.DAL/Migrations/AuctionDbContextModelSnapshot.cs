@@ -17,7 +17,7 @@ namespace Auction.DAL.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.11")
+                .HasAnnotation("ProductVersion", "10.0.4")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -34,16 +34,35 @@ namespace Auction.DAL.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
 
+                    b.Property<decimal?>("AmountEth")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("numeric(18,6)");
+
+                    b.Property<int>("Currency")
+                        .HasColumnType("integer");
+
                     b.Property<int>("LotId")
                         .HasColumnType("integer");
 
                     b.Property<DateTime>("PlacedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("UserId")
+                    b.Property<string>("TxHash")
+                        .HasMaxLength(66)
+                        .HasColumnType("character varying(66)");
+
+                    b.Property<int?>("UserId")
                         .HasColumnType("integer");
 
+                    b.Property<string>("WalletAddress")
+                        .HasMaxLength(42)
+                        .HasColumnType("character varying(42)");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("TxHash")
+                        .IsUnique()
+                        .HasFilter("\"TxHash\" IS NOT NULL");
 
                     b.HasIndex("UserId");
 
@@ -89,12 +108,20 @@ namespace Auction.DAL.Migrations
                     b.Property<int?>("CategoryId")
                         .HasColumnType("integer");
 
+                    b.Property<string>("ContractAddress")
+                        .HasMaxLength(42)
+                        .HasColumnType("character varying(42)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<decimal>("CurrentPrice")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
+
+                    b.Property<decimal?>("CurrentPriceEth")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("numeric(18,6)");
 
                     b.Property<string>("Description")
                         .IsRequired()
@@ -163,11 +190,9 @@ namespace Auction.DAL.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("LotId");
-
                     b.HasIndex("LotId")
-                        .HasDatabaseName("IX_LotImages_LotId_IsMain")
                         .IsUnique()
+                        .HasDatabaseName("IX_LotImages_LotId_IsMain")
                         .HasFilter("\"IsMain\" = TRUE");
 
                     b.ToTable("LotImages");
@@ -196,6 +221,13 @@ namespace Auction.DAL.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("RefreshToken")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<DateTime?>("RefreshTokenExpiryTime")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<int>("Role")
                         .HasColumnType("integer");
 
@@ -203,6 +235,10 @@ namespace Auction.DAL.Migrations
                         .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
+
+                    b.Property<string>("WalletAddress")
+                        .HasMaxLength(42)
+                        .HasColumnType("character varying(42)");
 
                     b.HasKey("Id");
 
@@ -226,8 +262,7 @@ namespace Auction.DAL.Migrations
                     b.HasOne("Auction.DAL.Entities.User", "User")
                         .WithMany("Bids")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Lot");
 

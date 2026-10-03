@@ -1,3 +1,5 @@
+using Auction.BLL.Constants;
+
 namespace Auction.BLL.DTOs.Bids;
 
 public class CreateBidDto
@@ -6,8 +8,8 @@ public class CreateBidDto
     public int LotId { get; set; }
 
     [System.ComponentModel.DataAnnotations.Range(
-        typeof(decimal),
-        "0.01",
-        "9999999999999999.99")]
+        MonetaryLimits.MinAmountDouble,
+        MonetaryLimits.MaxAmountDouble,
+        ErrorMessage = "Bid amount must be between 0.01 and 9999999999999999.99.")]
     public decimal Amount { get; set; }
 }

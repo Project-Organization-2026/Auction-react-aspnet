@@ -1,3 +1,5 @@
+using Auction.API.HostedServices;
+using Auction.API.Hubs;
 using Auction.BLL.Services;
 using Auction.BLL.Settings;
 using Auction.DAL.Data;
@@ -9,11 +11,16 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
+using System.Globalization;
 using System.Security.Claims;
 using System.Text;
 
-// Load local environment variables from .env
-DotNetEnv.Env.Load();
+// Ensure culture-invariant parsing and formatting across all threads
+CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
+CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
+
+// Load local environment variables from root or parent .env
+DotNetEnv.Env.TraversePath().Load();
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,6 +33,16 @@ builder.Services.AddScoped<LotImagesService>();
 builder.Services.AddScoped<CategoriesService>();
 builder.Services.AddScoped<UsersService>();
 builder.Services.AddScoped<AuthService>();
+builder.Services.AddHostedService<AuctionExpirationWorker>();
+builder.Services.AddSignalR();
+
+// Ethereum integration: named HttpClient used by EthereumService
+// (one client hits CoinGecko; RPC node URL is read from env inside the service)
+builder.Services.AddHttpClient<EthereumService>(client =>
+{
+    client.DefaultRequestHeaders.Add("Accept", "application/json");
+    client.DefaultRequestHeaders.Add("User-Agent", "BestAuction/1.0");
+});
 
 // Register JWT configuration
 builder.Services.Configure<JwtSettings>(
@@ -76,7 +93,8 @@ builder.Services.AddCors(options =>
     {
         policy.WithOrigins(allowedOrigins)
             .AllowAnyHeader()
-            .AllowAnyMethod();
+            .AllowAnyMethod()
+            .AllowCredentials();
     });
 });
 
@@ -141,11 +159,13 @@ if (app.Environment.IsDevelopment())
 
 // Configure HTTP request pipeline
 app.UseHttpsRedirection();
+app.UseStaticFiles();
 app.UseCors("Frontend");
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<AuctionHub>("/hubs/auction");
 app.MapGet("/api/health", () => Results.Ok(
     new
     {

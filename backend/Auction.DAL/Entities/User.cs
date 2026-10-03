@@ -11,6 +11,9 @@ public class User
     public UserRole Role { get; set; } = UserRole.User;
     public decimal Balance { get; set; } = 0;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public string? RefreshToken { get; set; }
+    public DateTime? RefreshTokenExpiryTime { get; set; }
+    public string? WalletAddress { get; set; }
 
     // Navigation properties
     public ICollection<Lot> CreatedLots { get; set; } = new List<Lot>();

@@ -7,9 +7,19 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'https://localhost:7161',
+        target: process.env.VITE_BACKEND_URL || 'http://localhost:5096',
         changeOrigin: true,
         secure: false,
+      },
+      '/uploads': {
+        target: process.env.VITE_BACKEND_URL || 'http://localhost:5096',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/hubs': {
+        target: process.env.VITE_BACKEND_URL || 'http://localhost:5096',
+        changeOrigin: true,
+        ws: true,
       },
     },
   },

@@ -27,6 +27,8 @@ public class AuctionDbContext : DbContext
             entity.Property(e => e.UserName).IsRequired().HasMaxLength(256);
             entity.Property(e => e.Email).IsRequired().HasMaxLength(256);
             entity.Property(e => e.PasswordHash).IsRequired();
+            entity.Property(e => e.RefreshToken).HasMaxLength(256);
+            entity.Property(e => e.WalletAddress).HasMaxLength(42);
             entity.HasIndex(e => e.Email).IsUnique();
             entity.HasIndex(e => e.UserName).IsUnique();
         });
@@ -50,6 +52,8 @@ public class AuctionDbContext : DbContext
             entity.Property(e => e.Description).HasMaxLength(5000);
             entity.Property(e => e.StartingPrice).HasPrecision(18, 2);
             entity.Property(e => e.CurrentPrice).HasPrecision(18, 2);
+            entity.Property(e => e.CurrentPriceEth).HasPrecision(18, 6);
+            entity.Property(e => e.ContractAddress).HasMaxLength(42);
             entity.Property(e => e.MinBidStep).HasPrecision(18, 2);
 
             // Foreign key - Seller
@@ -98,6 +102,9 @@ public class AuctionDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Id).ValueGeneratedOnAdd();
             entity.Property(e => e.Amount).HasPrecision(18, 2);
+            entity.Property(e => e.AmountEth).HasPrecision(18, 6);
+            entity.Property(e => e.TxHash).HasMaxLength(66);
+            entity.Property(e => e.WalletAddress).HasMaxLength(42);
 
             // Foreign key - Lot
             entity.HasOne(e => e.Lot)
@@ -105,14 +112,18 @@ public class AuctionDbContext : DbContext
                 .HasForeignKey(e => e.LotId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // Foreign key - User
+            // Foreign key - User (optional for direct Web3 bids)
             entity.HasOne(e => e.User)
                 .WithMany(u => u.Bids)
                 .HasForeignKey(e => e.UserId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.SetNull);
 
-            // Index for quick lookups
+            // Indexes
             entity.HasIndex(e => new { e.LotId, e.PlacedAt });
+            entity.HasIndex(e => e.TxHash)
+                .IsUnique()
+                .HasFilter("\"TxHash\" IS NOT NULL");
         });
     }
 }

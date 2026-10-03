@@ -5,6 +5,6 @@ namespace Auction.BLL.DTOs.Users;
 
 public class TopUpBalanceDto
 {
-    [Range(typeof(decimal), MonetaryLimits.MinAmountString, MonetaryLimits.MaxAmountString)]
+    [Range(MonetaryLimits.MinAmountDouble, MonetaryLimits.MaxAmountDouble, ErrorMessage = "Amount must be between 0.01 and 9999999999999999.99.")]
     public decimal Amount { get; set; }
 }
