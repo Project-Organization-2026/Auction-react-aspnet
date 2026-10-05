@@ -18,7 +18,9 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 COPY --from=backend-build /publish ./
 COPY --from=frontend-build /src/frontend/dist ./wwwroot/
+RUN mkdir -p ./wwwroot/uploads/lots && chown -R app:app ./wwwroot/uploads
 ENV ASPNETCORE_ENVIRONMENT=Production \
     ASPNETCORE_URLS=http://0.0.0.0:10000
 EXPOSE 10000
+USER app
 ENTRYPOINT ["dotnet", "Auction.API.dll"]
