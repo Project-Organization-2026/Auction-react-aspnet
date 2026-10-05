@@ -105,6 +105,8 @@ dotnet test backend/Auction.Tests/Auction.Tests.csproj
 
 ## Frontend setup
 
+For a single-container demo deployment of the React frontend and ASP.NET Core API, see [the Render deployment guide](docs/deploy-render.md).
+
 ```powershell
 cd frontend
 npm install

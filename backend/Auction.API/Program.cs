@@ -1,5 +1,6 @@
 using Auction.API.HostedServices;
 using Auction.API.Hubs;
+using Auction.API.Configuration;
 using Auction.BLL.Services;
 using Auction.BLL.Settings;
 using Auction.DAL.Data;
@@ -117,16 +118,7 @@ builder.Services.AddSwaggerGen(options =>
 // Configure PostgreSQL database
 builder.Services.AddDbContext<AuctionDbContext>(options =>
 {
-    string? connectionString =
-        builder.Configuration.GetConnectionString("DefaultConnection");
-
-    if (string.IsNullOrEmpty(connectionString))
-    {
-        throw new InvalidOperationException(
-            "Connection string 'DefaultConnection' not found.");
-    }
-
-    options.UseNpgsql(connectionString);
+    options.UseNpgsql(DatabaseConnection.Resolve(builder.Configuration));
 });
 
 var app = builder.Build();
@@ -172,5 +164,24 @@ app.MapGet("/api/health", () => Results.Ok(
         status = "Healthy",
         timestamp = DateTime.UtcNow
     })).AllowAnonymous();
+
+// The container serves the built React app from wwwroot. Keep API and hub
+// misses as real 404s while letting React handle its own client-side routes.
+var frontendIndex = Path.Combine(app.Environment.WebRootPath ?? "", "index.html");
+if (File.Exists(frontendIndex))
+{
+    app.MapFallback((HttpContext context) =>
+    {
+        var path = context.Request.Path;
+        if (path.StartsWithSegments("/api") ||
+            path.StartsWithSegments("/hubs") ||
+            path.StartsWithSegments("/uploads"))
+        {
+            return Results.NotFound();
+        }
+
+        return Results.File(frontendIndex, "text/html");
+    });
+}
 
 app.Run();

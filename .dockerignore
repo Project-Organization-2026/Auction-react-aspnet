@@ -1,0 +1,9 @@
+.git
+.env
+**/node_modules
+**/bin
+**/obj
+frontend/dist
+blockchain
+docs
+.github

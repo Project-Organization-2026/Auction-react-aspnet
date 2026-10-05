@@ -29,13 +29,16 @@ public static class DatabaseExtensions
 
             await SystemDataSeeder.SeedAsync(context);
 
-            if (env.IsDevelopment())
+            var demoSeedEnabled = bool.TryParse(
+                configuration["DemoSeed:Enabled"], out var enabled) && enabled;
+            if (env.IsDevelopment() || demoSeedEnabled)
             {
-                var seedPassword = configuration["DevelopmentSeed:Password"];
+                var seedPassword = configuration["DemoSeed:Password"]
+                    ?? configuration["DevelopmentSeed:Password"];
                 if (seedPassword is not null && seedPassword.Length is < 8 or > 128)
                 {
                     throw new InvalidOperationException(
-                        "DevelopmentSeed:Password must contain from 8 to 128 characters.");
+                        "The demo seed password must contain from 8 to 128 characters.");
                 }
 
                 await DevelopmentDataSeeder.SeedAsync(
@@ -45,7 +48,7 @@ public static class DatabaseExtensions
                 if (seedPassword is null)
                 {
                     logger.LogInformation(
-                        "Development user and lot seeds were skipped because DevelopmentSeed:Password is unset.");
+                        "Demo user and lot seeds were skipped because no seed password is set.");
                 }
             }
 
