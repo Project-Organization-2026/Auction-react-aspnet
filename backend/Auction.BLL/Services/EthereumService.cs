@@ -235,14 +235,24 @@ public class EthereumService
             throw new InvalidOperationException("Configured contract deployer is not unlocked on Ganache.");
         }
 
-        object transaction = to is null
+        object estimateTransaction = to is null
             ? new { from = deployer, data }
             : new { from = deployer, to, data };
+        var gasLimit = await EstimateGasAsync(estimateTransaction);
+        var gas = "0x" + gasLimit.ToString("x", CultureInfo.InvariantCulture).TrimStart('0');
+        object transaction = to is null
+            ? new { from = deployer, data, gas }
+            : new { from = deployer, to, data, gas };
         var sendResponse = await _httpClient.PostAsJsonAsync(
             _rpcUrl,
             new RpcRequest("eth_sendTransaction", [transaction], 5));
         sendResponse.EnsureSuccessStatusCode();
         var sent = await sendResponse.Content.ReadFromJsonAsync<RpcResponse<JsonElement>>();
+        if (sent?.Error is { ValueKind: JsonValueKind.Object } error)
+        {
+            throw new InvalidOperationException(
+                $"Ethereum node rejected the auction transaction: {GetRpcErrorMessage(error)}");
+        }
         var txHash = sent?.Result.ValueKind == JsonValueKind.String
             ? sent.Result.GetString()
             : null;
@@ -274,6 +284,36 @@ public class EthereumService
 
         throw new InvalidOperationException("Timed out waiting for the auction contract transaction receipt.");
     }
+
+    private async Task<BigInteger> EstimateGasAsync(object transaction)
+    {
+        var response = await _httpClient.PostAsJsonAsync(
+            _rpcUrl, new RpcRequest("eth_estimateGas", [transaction], 8));
+        response.EnsureSuccessStatusCode();
+        var estimate = await response.Content.ReadFromJsonAsync<RpcResponse<JsonElement>>();
+        if (estimate?.Error is { ValueKind: JsonValueKind.Object } error)
+        {
+            throw new InvalidOperationException(
+                $"Ethereum node could not estimate auction gas: {GetRpcErrorMessage(error)}");
+        }
+
+        var gasHex = estimate?.Result.ValueKind == JsonValueKind.String
+            ? estimate.Result.GetString()
+            : null;
+        if (string.IsNullOrWhiteSpace(gasHex) || !gasHex.StartsWith("0x", StringComparison.OrdinalIgnoreCase) ||
+            !BigInteger.TryParse("0" + gasHex[2..], NumberStyles.HexNumber,
+                CultureInfo.InvariantCulture, out var estimatedGas) || estimatedGas <= 0)
+        {
+            throw new InvalidOperationException("Ethereum node returned an invalid gas estimate.");
+        }
+
+        return estimatedGas + estimatedGas / 5 + 10_000;
+    }
+
+    private static string GetRpcErrorMessage(JsonElement error) =>
+        error.TryGetProperty("message", out var message) && message.ValueKind == JsonValueKind.String
+            ? message.GetString() ?? "Unknown JSON-RPC error."
+            : "Unknown JSON-RPC error.";
 
     /// <summary>
     /// Verifies that the on-chain transaction is successful, sent to the correct contract,

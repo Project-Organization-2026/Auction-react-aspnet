@@ -55,6 +55,7 @@ public class EthereumServiceTests
         var artifactPath = Path.GetTempFileName();
         await File.WriteAllTextAsync(artifactPath, "{\"bytecode\":\"0x6000\"}");
         var methods = new List<string>();
+        string? suppliedGas = null;
         try
         {
             using var client = new HttpClient(new RpcHandler(method =>
@@ -67,6 +68,7 @@ public class EthereumServiceTests
                         jsonrpc = "2.0",
                         result = new[] { WalletAddress }
                     }),
+                    "eth_estimateGas" => "{\"jsonrpc\":\"2.0\",\"result\":\"0xf156a\"}",
                     "eth_sendTransaction" => "{\"jsonrpc\":\"2.0\",\"result\":\"0xtx\"}",
                     "eth_getTransactionReceipt" => JsonSerializer.Serialize(new
                     {
@@ -76,13 +78,21 @@ public class EthereumServiceTests
                     "eth_getCode" => "{\"jsonrpc\":\"2.0\",\"result\":\"0x6000\"}",
                     _ => throw new Exception($"Unexpected RPC call: {method}")
                 };
+            }, request =>
+            {
+                if (request.GetProperty("method").GetString() == "eth_sendTransaction")
+                {
+                    suppliedGas = request.GetProperty("params")[0].GetProperty("gas").GetString();
+                }
             }));
             var service = new EthereumService(client);
 
             var address = await service.DeployAuctionAsync(2, DateTime.UtcNow.AddMinutes(10), 120m, artifactPath);
 
             Assert.Equal(ContractAddress, address);
-            Assert.Equal(["eth_accounts", "eth_sendTransaction", "eth_getTransactionReceipt", "eth_getCode"], methods);
+            Assert.Equal(["eth_accounts", "eth_estimateGas", "eth_sendTransaction", "eth_getTransactionReceipt", "eth_getCode"], methods);
+            Assert.NotNull(suppliedGas);
+            Assert.True(Convert.ToInt64(suppliedGas![2..], 16) > Convert.ToInt64("f156a", 16));
         }
         finally
         {
@@ -92,7 +102,40 @@ public class EthereumServiceTests
         }
     }
 
-    private sealed class RpcHandler(Func<string, string> responseForMethod) : HttpMessageHandler
+    [Fact]
+    public async Task DeployAuctionReportsGanacheTransactionError()
+    {
+        var artifactPath = Path.GetTempFileName();
+        await File.WriteAllTextAsync(artifactPath, "{\"bytecode\":\"0x6000\"}");
+        try
+        {
+            using var client = new HttpClient(new RpcHandler(method => method switch
+            {
+                "eth_accounts" => JsonSerializer.Serialize(new
+                {
+                    jsonrpc = "2.0",
+                    result = new[] { WalletAddress }
+                }),
+                "eth_estimateGas" => "{\"jsonrpc\":\"2.0\",\"result\":\"0xf156a\"}",
+                "eth_sendTransaction" => "{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-32000,\"message\":\"gas limit too low\"}}",
+                _ => throw new Exception($"Unexpected RPC call: {method}")
+            }));
+            var service = new EthereumService(client);
+
+            var error = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                service.DeployAuctionAsync(2, DateTime.UtcNow.AddMinutes(10), 120m, artifactPath));
+
+            Assert.Contains("gas limit too low", error.Message);
+        }
+        finally
+        {
+            File.Delete(artifactPath);
+        }
+    }
+
+    private sealed class RpcHandler(
+        Func<string, string> responseForMethod,
+        Action<JsonElement>? observeRequest = null) : HttpMessageHandler
     {
         protected override async Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
@@ -100,6 +143,7 @@ public class EthereumServiceTests
         {
             var body = await request.Content!.ReadAsStringAsync(cancellationToken);
             using var document = JsonDocument.Parse(body);
+            observeRequest?.Invoke(document.RootElement);
             var method = document.RootElement.GetProperty("method").GetString()!;
             return new HttpResponseMessage(HttpStatusCode.OK)
             {
