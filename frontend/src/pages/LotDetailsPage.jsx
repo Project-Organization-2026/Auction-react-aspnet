@@ -23,7 +23,6 @@ function LotDetailsPage() {
     connectWallet,
     switchToGanache,
     placeOnChainBid,
-    contractAddress,
   } = useWeb3();
 
   const [lot, setLot] = useState(null);
@@ -84,6 +83,9 @@ function LotDetailsPage() {
       });
       setLot((prev) => {
         if (!prev) return prev;
+        if (newBid.currency === 1) {
+          return { ...prev, currentPriceEth: newBid.amountEth };
+        }
         return {
           ...prev,
           currentPrice: newBid.amount,
@@ -133,6 +135,7 @@ function LotDetailsPage() {
   const isOwner = user && lot.seller && lot.seller.id === user.id;
   const ended = isLotEnded(lot);
   const canClose = isOwner && lot.status === LOT_STATUS.ACTIVE && ended;
+  const ethLeader = bids.find((bid) => bid.currency === 1);
 
   const handlePlaceBid = async (e) => {
     e.preventDefault();
@@ -197,7 +200,7 @@ function LotDetailsPage() {
     setIsOnChainBidding(true);
     try {
       // Step 1: send tx to smart contract via MetaMask
-      const result = await placeOnChainBid(val);
+      const result = await placeOnChainBid(val, lot.id, lot.contractAddress);
 
       // Step 2: register the confirmed tx on the platform backend
       await bidsApi.createOnChain({
@@ -262,7 +265,7 @@ function LotDetailsPage() {
           </div>
 
           <div className="bid-panel__price-label" style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <span>Current price</span>
+            <span>{bidMode === "eth" ? "Current ETH bid" : "Current price"}</span>
             {lot.status === LOT_STATUS.ACTIVE && !ended && (
               <span className="live-badge">
                 <span className="live-badge__dot" /> Live
@@ -270,16 +273,20 @@ function LotDetailsPage() {
             )}
           </div>
           <div className={`bid-panel__price ${pricePulse ? "price-pulse" : ""}`}>
-            {formatPrice(lot.currentPrice)}
+            {bidMode === "eth"
+              ? lot.currentPriceEth != null
+                ? `${Number(lot.currentPriceEth).toFixed(4)} ETH`
+                : "No ETH bids yet"
+              : formatPrice(lot.currentPrice)}
           </div>
           <div className="bid-panel__end">{getEndLabel(lot)}</div>
 
-          {lot.winner && (
+          {(bidMode === "eth" ? ethLeader : lot.winner) && (
             <div className={`bid-panel__winner ${lot.status === LOT_STATUS.COMPLETED || ended ? "completed" : "active-leader"}`}>
               {lot.status === LOT_STATUS.COMPLETED || ended ? (
-                <>🏆 Winner: <strong>{lot.winner.userName || `User #${lot.winner.id}`}</strong></>
+                <>🏆 {bidMode === "eth" ? "ETH leader" : "Winner"}: <strong>{bidMode === "eth" ? ethLeader.userName || `User #${ethLeader.userId}` : lot.winner.userName || `User #${lot.winner.id}`}</strong></>
               ) : (
-                <>🥇 Top Bidder: <strong>{lot.winner.userName || `User #${lot.winner.id}`}</strong></>
+                <>🥇 Top Bidder: <strong>{bidMode === "eth" ? ethLeader.userName || `User #${ethLeader.userId}` : lot.winner.userName || `User #${lot.winner.id}`}</strong></>
               )}
             </div>
           )}
@@ -339,6 +346,10 @@ function LotDetailsPage() {
                     <span className="bid-mode-tab__text">Ethereum (ETH)</span>
                   </button>
                 </div>
+
+                {bidMode === "eth" && (
+                  <p className="field-hint">ETH bids are a separate demo auction and do not affect the USD winner.</p>
+                )}
 
                 {bidMode === "usd" ? (
                   <form onSubmit={handlePlaceBid} className="bid-form">
@@ -446,15 +457,21 @@ function LotDetailsPage() {
                       </div>
                     )}
 
-                    {contractAddress && (
+                    {lot.contractAddress && (
                       <div className="eth-contract-info">
                         <span className="eth-contract-badge">Smart Contract</span>
-                        <span className="eth-contract-addr" title={contractAddress}>
-                          {contractAddress.slice(0, 8)}...{contractAddress.slice(-6)}
+                        <span className="eth-contract-addr" title={lot.contractAddress}>
+                          {lot.contractAddress.slice(0, 8)}...{lot.contractAddress.slice(-6)}
                         </span>
                         <span className="eth-network-badge">
-                          {chainId === 1337 || chainId === 5777 ? "Ganache (7545)" : chainId === 31337 ? "Hardhat (8545)" : `Chain ID: ${chainId || "Local"}`}
+                          {chainId === 1337 || chainId === 5777 ? `Ganache (${chainId})` : chainId === 31337 ? "Hardhat (31337)" : `Chain ID: ${chainId || "Unknown"}`}
                         </span>
+                      </div>
+                    )}
+
+                    {!lot.contractAddress && (
+                      <div className="bid-panel__alert warning" role="status">
+                        ETH bidding is being prepared for this lot. Please try again shortly.
                       </div>
                     )}
 
@@ -514,9 +531,9 @@ function LotDetailsPage() {
                         <button
                           type="submit"
                           className="bid-main-button eth-mode"
-                          disabled={isOnChainBidding}
+                          disabled={isOnChainBidding || !lot.contractAddress}
                         >
-                          {isOnChainBidding ? "Confirming in MetaMask..." : "Place ETH Bid"}
+                          {isOnChainBidding ? "Confirming in MetaMask..." : lot.contractAddress ? "Place ETH Bid" : "ETH bidding unavailable"}
                         </button>
                       )}
                     </div>

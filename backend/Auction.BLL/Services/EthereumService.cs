@@ -87,6 +87,116 @@ public class EthereumService
         return rate > 0 ? Math.Round(amountUsd / rate, 8) : 0;
     }
 
+    public async Task<bool> HasContractCodeAsync(string address)
+    {
+        if (string.IsNullOrWhiteSpace(address)) return false;
+
+        var response = await _httpClient.PostAsJsonAsync(
+            _rpcUrl,
+            new RpcRequest("eth_getCode", [address, "latest"], 3));
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new InvalidOperationException("Failed to check the auction smart contract on Ethereum node.");
+        }
+
+        var result = await response.Content.ReadFromJsonAsync<RpcResponse<JsonElement>>();
+        if (result?.Error is { ValueKind: JsonValueKind.Object })
+        {
+            throw new InvalidOperationException("Ethereum node rejected the contract code check.");
+        }
+
+        return result?.Result.ValueKind == JsonValueKind.String &&
+               !string.IsNullOrWhiteSpace(result.Result.GetString()) &&
+               result.Result.GetString() != "0x";
+    }
+
+    /// <summary>Deploys a dedicated Auction contract for one active demo lot.</summary>
+    public async Task<string> DeployAuctionAsync(int lotId, DateTime endTime, string? artifactPath = null)
+    {
+        if (lotId <= 0 || endTime <= DateTime.UtcNow)
+        {
+            throw new InvalidOperationException("Only active, unexpired lots can receive an auction contract.");
+        }
+
+        artifactPath ??= Environment.GetEnvironmentVariable("ETHEREUM_CONTRACT_ARTIFACT_PATH")
+            ?? Path.Combine(AppContext.BaseDirectory, "contracts", "Auction.json");
+        using var artifact = JsonDocument.Parse(await File.ReadAllTextAsync(artifactPath));
+        var bytecode = artifact.RootElement.GetProperty("bytecode").GetString();
+        if (string.IsNullOrWhiteSpace(bytecode) || !bytecode.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("Auction contract bytecode is missing from the build artifact.");
+        }
+
+        var startingBidText = Environment.GetEnvironmentVariable("ETHEREUM_STARTING_BID_ETH");
+        var startingBidEth = decimal.TryParse(startingBidText, NumberStyles.Number,
+            CultureInfo.InvariantCulture, out var configuredBid) && configuredBid > 0
+            ? configuredBid
+            : 0.01m;
+        var startingWei = (BigInteger)(startingBidEth * 1_000_000_000_000_000_000m);
+        var durationSeconds = Math.Max(1L, (long)Math.Ceiling((endTime - DateTime.UtcNow).TotalSeconds));
+        var deploymentData = bytecode +
+            ToUint256Hex(lotId) +
+            ToUint256Hex(startingWei) +
+            ToUint256Hex(durationSeconds);
+
+        var accountsResponse = await _httpClient.PostAsJsonAsync(
+            _rpcUrl,
+            new RpcRequest("eth_accounts", [], 4));
+        accountsResponse.EnsureSuccessStatusCode();
+        var accounts = await accountsResponse.Content.ReadFromJsonAsync<RpcResponse<JsonElement>>();
+        if (accounts?.Result.ValueKind != JsonValueKind.Array || accounts.Result.GetArrayLength() == 0)
+        {
+            throw new InvalidOperationException("Ganache has no unlocked deployer accounts.");
+        }
+
+        var deployer = Environment.GetEnvironmentVariable("ETHEREUM_DEPLOYER_ADDRESS")
+            ?? accounts.Result[0].GetString();
+        if (string.IsNullOrWhiteSpace(deployer) ||
+            !accounts.Result.EnumerateArray().Any(account =>
+                string.Equals(account.GetString(), deployer, StringComparison.OrdinalIgnoreCase)))
+        {
+            throw new InvalidOperationException("Configured contract deployer is not unlocked on Ganache.");
+        }
+
+        var sendResponse = await _httpClient.PostAsJsonAsync(
+            _rpcUrl,
+            new RpcRequest("eth_sendTransaction", [new { from = deployer, data = deploymentData }], 5));
+        sendResponse.EnsureSuccessStatusCode();
+        var sent = await sendResponse.Content.ReadFromJsonAsync<RpcResponse<JsonElement>>();
+        var txHash = sent?.Result.ValueKind == JsonValueKind.String
+            ? sent.Result.GetString()
+            : null;
+        if (string.IsNullOrWhiteSpace(txHash))
+        {
+            throw new InvalidOperationException("Ethereum node did not return a contract deployment transaction hash.");
+        }
+
+        for (var attempt = 0; attempt < 30; attempt++)
+        {
+            var receiptResponse = await _httpClient.PostAsJsonAsync(
+                _rpcUrl,
+                new RpcRequest("eth_getTransactionReceipt", [txHash], 6));
+            receiptResponse.EnsureSuccessStatusCode();
+            var receipt = await receiptResponse.Content.ReadFromJsonAsync<RpcResponse<JsonElement>>();
+            if (receipt?.Result.ValueKind == JsonValueKind.Object)
+            {
+                var status = receipt.Result.GetProperty("status").GetString();
+                var address = receipt.Result.GetProperty("contractAddress").GetString();
+                if (status is not ("0x1" or "0x01") || string.IsNullOrWhiteSpace(address) ||
+                    !await HasContractCodeAsync(address))
+                {
+                    throw new InvalidOperationException("Auction contract deployment failed on Ganache.");
+                }
+
+                return address;
+            }
+
+            await Task.Delay(TimeSpan.FromSeconds(1));
+        }
+
+        throw new InvalidOperationException("Timed out waiting for the auction contract deployment receipt.");
+    }
+
     /// <summary>
     /// Verifies that the on-chain transaction is successful, sent to the correct contract,
     /// by the claimed wallet, and carries at least the claimed ETH value.
@@ -98,6 +208,11 @@ public class EthereumService
         decimal expectedAmountEth,
         string expectedSenderWallet)
     {
+        if (string.IsNullOrWhiteSpace(expectedContractAddress))
+        {
+            throw new InvalidOperationException("This lot has no auction smart contract configured.");
+        }
+
         // 1. Receipt — confirm status == 0x1 (not reverted)
         var receiptPayload = new RpcRequest("eth_getTransactionReceipt", [txHash], 1);
         var receiptResponse = await _httpClient.PostAsJsonAsync(_rpcUrl, receiptPayload);
@@ -112,13 +227,10 @@ public class EthereumService
             throw new InvalidOperationException("Transaction receipt not found or still pending.");
         }
 
-        if (receiptResult.Result.TryGetProperty("status", out var statusProp))
+        if (!receiptResult.Result.TryGetProperty("status", out var statusProp) ||
+            (statusProp.GetString() != "0x1" && statusProp.GetString() != "0x01"))
         {
-            var statusStr = statusProp.GetString();
-            if (statusStr != "0x1" && statusStr != "0x01")
-            {
-                throw new InvalidOperationException("Transaction failed or was reverted on the blockchain.");
-            }
+            throw new InvalidOperationException("Transaction failed or was reverted on the blockchain.");
         }
 
         // 2. Transaction details — confirm from, to, value
@@ -148,36 +260,48 @@ public class EthereumService
                 $"Transaction sender ({from}) does not match bidder wallet ({expectedSenderWallet}).");
         }
 
-        // Verify recipient contract (if contract address is stored on lot)
-        if (!string.IsNullOrEmpty(expectedContractAddress) &&
-            !string.Equals(to, expectedContractAddress, StringComparison.OrdinalIgnoreCase))
+        // A confirmed ETH transfer to an empty address is not an auction bid.
+        if (!string.Equals(to, expectedContractAddress, StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidOperationException(
                 $"Transaction recipient does not match the auction smart contract ({expectedContractAddress}).");
         }
 
-        // Verify value (allow ±0.0001 ETH rounding tolerance)
-        if (!string.IsNullOrEmpty(valueHex))
+        if (!await HasContractCodeAsync(expectedContractAddress))
         {
-            var rawHex = valueHex.StartsWith("0x", StringComparison.OrdinalIgnoreCase)
-                ? valueHex[2..]
-                : valueHex;
+            throw new InvalidOperationException("No auction smart contract is deployed at the configured address.");
+        }
 
-            if (BigInteger.TryParse(rawHex, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var valueInWei))
-            {
-                var expectedWei = (BigInteger)(expectedAmountEth * 1_000_000_000_000_000_000m);
-                var tolerance = (BigInteger)(0.0001m * 1_000_000_000_000_000_000m);
+        // The registered bid must equal the value actually paid into the contract.
+        if (string.IsNullOrEmpty(valueHex))
+        {
+            throw new InvalidOperationException("Transaction value is missing.");
+        }
 
-                if (valueInWei + tolerance < expectedWei)
-                {
-                    throw new InvalidOperationException(
-                        "Transaction value is less than the claimed bid amount.");
-                }
-            }
+        var rawHex = valueHex.StartsWith("0x", StringComparison.OrdinalIgnoreCase)
+            ? valueHex[2..]
+            : valueHex;
+
+        // Prefix a zero so BigInteger parses hex as an unsigned positive value.
+        if (!BigInteger.TryParse("0" + rawHex, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var valueInWei))
+        {
+            throw new InvalidOperationException("Transaction value is invalid.");
+        }
+
+        var expectedWei = (BigInteger)(expectedAmountEth * 1_000_000_000_000_000_000m);
+        if (valueInWei != expectedWei)
+        {
+            throw new InvalidOperationException("Transaction value does not match the claimed bid amount.");
         }
     }
 
     // ─── Private models ───────────────────────────────────────────────────────
+
+    private static string ToUint256Hex(BigInteger value)
+    {
+        if (value < 0) throw new ArgumentOutOfRangeException(nameof(value));
+        return value.ToString("x", CultureInfo.InvariantCulture).PadLeft(64, '0');
+    }
 
     private sealed record RpcRequest(
         [property: JsonPropertyName("method")] string Method,

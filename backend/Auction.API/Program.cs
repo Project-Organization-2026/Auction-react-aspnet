@@ -35,6 +35,7 @@ builder.Services.AddScoped<CategoriesService>();
 builder.Services.AddScoped<UsersService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddHostedService<AuctionExpirationWorker>();
+builder.Services.AddHostedService<AuctionContractDeploymentWorker>();
 builder.Services.AddSignalR();
 
 // Ethereum integration: named HttpClient used by EthereumService

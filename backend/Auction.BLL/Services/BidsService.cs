@@ -235,10 +235,8 @@ public class BidsService
             user.WalletAddress = normalizedWallet;
         }
 
-        // Update lot prices & top bidder
-        lot.CurrentPrice = usdEquivalent;
+        // ETH is a separate demo auction; it does not change the USD price or winner.
         lot.CurrentPriceEth = dto.AmountEth;
-        lot.WinnerId = userId;
 
         var bid = new Bid
         {
@@ -265,4 +263,5 @@ public class BidsService
 
         return resultDto;
     }
+
 }

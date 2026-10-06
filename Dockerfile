@@ -3,7 +3,15 @@ WORKDIR /src/frontend
 COPY frontend/package*.json ./
 RUN npm ci
 COPY frontend/ ./
+ARG VITE_GANACHE_RPC_URL
 RUN npm run build
+
+FROM node:22-alpine AS contract-build
+WORKDIR /src/blockchain
+COPY blockchain/package*.json ./
+RUN npm ci
+COPY blockchain/ ./
+RUN npx hardhat compile
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS backend-build
 WORKDIR /src
@@ -18,6 +26,7 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 COPY --from=backend-build /publish ./
 COPY --from=frontend-build /src/frontend/dist ./wwwroot/
+COPY --from=contract-build /src/blockchain/artifacts/contracts/Auction.sol/Auction.json ./contracts/Auction.json
 RUN mkdir -p ./wwwroot/uploads/lots && chown -R app:app ./wwwroot/uploads
 ENV ASPNETCORE_ENVIRONMENT=Production \
     ASPNETCORE_URLS=http://0.0.0.0:10000

@@ -3,6 +3,7 @@ import { ethers } from "ethers";
 import auctionContractArtifact from "../contracts/Auction.json";
 
 const Web3Context = createContext(null);
+const ganacheRpcUrl = import.meta.env.VITE_GANACHE_RPC_URL || "http://127.0.0.1:7545";
 
 export function Web3Provider({ children }) {
   const [account, setAccount] = useState(null);
@@ -109,25 +110,40 @@ export function Web3Provider({ children }) {
   }, [updateAccountData]);
 
   // Place on-chain bid using the deployed Auction smart contract
-  const placeOnChainBid = async (amountInEth) => {
+  const placeOnChainBid = async (amountInEth, expectedLotId, contractAddress) => {
     if (!account) {
       const connected = await connectWallet();
       if (!connected) throw new Error("Wallet not connected.");
     }
 
-    if (!auctionContractArtifact || !auctionContractArtifact.address) {
-      throw new Error("Auction contract artifact or address not configured.");
+    if (!contractAddress || !ethers.isAddress(contractAddress)) {
+      throw new Error("This lot does not have an auction contract yet. Try again shortly.");
     }
 
     const provider = new ethers.BrowserProvider(window.ethereum);
+    const code = await provider.getCode(contractAddress);
+    if (code === "0x") {
+      throw new Error("Auction contract is not deployed at the configured address on this network. Switch to the correct Ganache network or update the contract address.");
+    }
     const signer = await provider.getSigner();
     const contract = new ethers.Contract(
-      auctionContractArtifact.address,
+      contractAddress,
       auctionContractArtifact.abi,
       signer
     );
 
+    const onChainLotId = await contract.lotId();
+    if (onChainLotId !== BigInt(expectedLotId)) {
+      throw new Error(`This contract belongs to lot #${onChainLotId}, not lot #${expectedLotId}.`);
+    }
+
     const value = ethers.parseEther(String(amountInEth));
+    const highestBid = await contract.highestBid();
+    const startingPrice = await contract.startingPrice();
+    const minimum = highestBid > 0n ? highestBid : startingPrice;
+    if (value <= minimum) {
+      throw new Error(`ETH bid must be greater than ${ethers.formatEther(minimum)} ETH.`);
+    }
     const tx = await contract.placeBid({ value });
     const receipt = await tx.wait();
 
@@ -155,13 +171,13 @@ export function Web3Provider({ children }) {
             params: [
               {
                 chainId: chainIdHex,
-                chainName: "Ganache Local",
+                chainName: "Ganache",
                 nativeCurrency: {
                   name: "Ethereum",
                   symbol: "ETH",
                   decimals: 18,
                 },
-                rpcUrls: ["http://127.0.0.1:7545"],
+                rpcUrls: [ganacheRpcUrl],
               },
             ],
           });
@@ -185,7 +201,6 @@ export function Web3Provider({ children }) {
     disconnectWallet,
     switchToGanache,
     placeOnChainBid,
-    contractAddress: auctionContractArtifact?.address,
   };
 
   return <Web3Context.Provider value={value}>{children}</Web3Context.Provider>;

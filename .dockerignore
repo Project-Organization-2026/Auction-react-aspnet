@@ -4,6 +4,7 @@
 **/bin
 **/obj
 frontend/dist
-blockchain
+blockchain/artifacts
+blockchain/cache
 docs
 .github
