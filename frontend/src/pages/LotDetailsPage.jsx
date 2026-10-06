@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { ethers } from "ethers";
 import { Link, useParams } from "react-router-dom";
 import LotGallery from "../components/LotGallery";
 import { formatDateTime, formatPrice } from "../utils/format.js";
@@ -23,6 +24,9 @@ function LotDetailsPage() {
     connectWallet,
     switchToGanache,
     placeOnChainBid,
+    getPendingReturn,
+    getMinimumBid,
+    withdrawOutbidBid,
   } = useWeb3();
 
   const [lot, setLot] = useState(null);
@@ -39,6 +43,9 @@ function LotDetailsPage() {
   const [ethBidAmount, setEthBidAmount] = useState("0.05");
   const [isOnChainBidding, setIsOnChainBidding] = useState(false);
   const [onChainSuccess, setOnChainSuccess] = useState("");
+  const [pendingReturn, setPendingReturn] = useState(0n);
+  const [minimumEthBid, setMinimumEthBid] = useState(null);
+  const [isWithdrawing, setIsWithdrawing] = useState(false);
 
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [topUpModalOpen, setTopUpModalOpen] = useState(false);
@@ -83,12 +90,10 @@ function LotDetailsPage() {
       });
       setLot((prev) => {
         if (!prev) return prev;
-        if (newBid.currency === 1) {
-          return { ...prev, currentPriceEth: newBid.amountEth };
-        }
         return {
           ...prev,
           currentPrice: newBid.amount,
+          currentPriceEth: newBid.currency === 1 ? newBid.amountEth : null,
           winnerId: newBid.userId,
           winner: {
             id: newBid.userId,
@@ -108,6 +113,49 @@ function LotDetailsPage() {
       leaveLotGroup(lotId);
     };
   }, [lotId]);
+
+  useEffect(() => {
+    let active = true;
+    if (!lot?.contractAddress || !web3Account) {
+      setPendingReturn(0n);
+      return undefined;
+    }
+    getPendingReturn(lot.contractAddress, web3Account)
+      .then((amount) => { if (active) setPendingReturn(amount); })
+      .catch(() => { if (active) setPendingReturn(0n); });
+    return () => { active = false; };
+  }, [lot?.contractAddress, web3Account, bids, getPendingReturn]);
+
+  useEffect(() => {
+    let active = true;
+    if (!lot?.contractAddress || !web3Account) {
+      setMinimumEthBid(null);
+      return undefined;
+    }
+    getMinimumBid(lot.contractAddress)
+      .then((minimum) => {
+        if (!active || minimum === null) return;
+        setMinimumEthBid(minimum);
+        const suggestion = Math.ceil((Number(ethers.formatEther(minimum)) + 0.0001) * 10000) / 10000;
+        setEthBidAmount(suggestion.toFixed(4));
+      })
+      .catch(() => { if (active) setMinimumEthBid(null); });
+    return () => { active = false; };
+  }, [lot?.contractAddress, web3Account, bids, getMinimumBid]);
+
+  const handleWithdraw = async () => {
+    setIsWithdrawing(true);
+    setError("");
+    try {
+      await withdrawOutbidBid(lot.contractAddress);
+      setPendingReturn(0n);
+      setSuccessMsg("Your outbid ETH was returned to your wallet.");
+    } catch (err) {
+      setError(formatWeb3Error(err));
+    } finally {
+      setIsWithdrawing(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -135,7 +183,6 @@ function LotDetailsPage() {
   const isOwner = user && lot.seller && lot.seller.id === user.id;
   const ended = isLotEnded(lot);
   const canClose = isOwner && lot.status === LOT_STATUS.ACTIVE && ended;
-  const ethLeader = bids.find((bid) => bid.currency === 1);
 
   const handlePlaceBid = async (e) => {
     e.preventDefault();
@@ -265,7 +312,7 @@ function LotDetailsPage() {
           </div>
 
           <div className="bid-panel__price-label" style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <span>{bidMode === "eth" ? "Current ETH bid" : "Current price"}</span>
+            <span>Current price</span>
             {lot.status === LOT_STATUS.ACTIVE && !ended && (
               <span className="live-badge">
                 <span className="live-badge__dot" /> Live
@@ -273,20 +320,16 @@ function LotDetailsPage() {
             )}
           </div>
           <div className={`bid-panel__price ${pricePulse ? "price-pulse" : ""}`}>
-            {bidMode === "eth"
-              ? lot.currentPriceEth != null
-                ? `${Number(lot.currentPriceEth).toFixed(4)} ETH`
-                : "No ETH bids yet"
-              : formatPrice(lot.currentPrice)}
+            {formatPrice(lot.currentPrice)}
           </div>
           <div className="bid-panel__end">{getEndLabel(lot)}</div>
 
-          {(bidMode === "eth" ? ethLeader : lot.winner) && (
+          {lot.winner && (
             <div className={`bid-panel__winner ${lot.status === LOT_STATUS.COMPLETED || ended ? "completed" : "active-leader"}`}>
               {lot.status === LOT_STATUS.COMPLETED || ended ? (
-                <>🏆 {bidMode === "eth" ? "ETH leader" : "Winner"}: <strong>{bidMode === "eth" ? ethLeader.userName || `User #${ethLeader.userId}` : lot.winner.userName || `User #${lot.winner.id}`}</strong></>
+                <>🏆 Winner: <strong>{lot.winner.userName || `User #${lot.winner.id}`}</strong></>
               ) : (
-                <>🥇 Top Bidder: <strong>{bidMode === "eth" ? ethLeader.userName || `User #${ethLeader.userId}` : lot.winner.userName || `User #${lot.winner.id}`}</strong></>
+                <>🥇 Top Bidder: <strong>{lot.winner.userName || `User #${lot.winner.id}`}</strong></>
               )}
             </div>
           )}
@@ -294,6 +337,13 @@ function LotDetailsPage() {
           {error && <div className="bid-panel__alert error" role="alert">{error}</div>}
           {successMsg && <div className="bid-panel__alert success" role="status">{successMsg}</div>}
           {onChainSuccess && <div className="bid-panel__alert success" role="status">{onChainSuccess}</div>}
+
+          {pendingReturn > 0n && (
+            <button type="button" className="quick-bid-preset-btn"
+              onClick={handleWithdraw} disabled={isWithdrawing}>
+              {isWithdrawing ? "Withdrawing..." : `Withdraw ${ethers.formatEther(pendingReturn)} ETH from an outbid bid`}
+            </button>
+          )}
 
           {canClose && (
             <div className="owner-close-box">
@@ -347,9 +397,7 @@ function LotDetailsPage() {
                   </button>
                 </div>
 
-                {bidMode === "eth" && (
-                  <p className="field-hint">ETH bids are a separate demo auction and do not affect the USD winner.</p>
-                )}
+                <p className="field-hint">USD and ETH bids compete for the same lot and winner. ETH amounts are converted at the demo exchange rate.</p>
 
                 {bidMode === "usd" ? (
                   <form onSubmit={handlePlaceBid} className="bid-form">
@@ -442,6 +490,14 @@ function LotDetailsPage() {
                         </button>
                       )}
                     </div>
+                    {minimumEthBid !== null && (
+                      <p className="field-hint">ETH bid must exceed {ethers.formatEther(minimumEthBid)} ETH to beat the current USD or ETH bid.</p>
+                    )}
+                    {lot.contractAddress && web3Account && minimumEthBid === null && (
+                      <p className="bid-panel__alert warning" role="status">
+                        The auction contract is unavailable or uses an older version. ETH bidding is paused for this lot.
+                      </p>
+                    )}
 
                     {web3Account && chainId && chainId !== 1337 && chainId !== 5777 && (
                       <div className="bid-panel__alert warning" style={{ marginBottom: 12, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
@@ -480,8 +536,8 @@ function LotDetailsPage() {
                         id="eth-bid-amount"
                         className="bid-full-input"
                         type="number"
-                        min="0.001"
-                        step="0.001"
+                        min="0.0001"
+                        step="0.0001"
                         placeholder="0.05"
                         value={ethBidAmount}
                         disabled={isOnChainBidding}
@@ -531,7 +587,7 @@ function LotDetailsPage() {
                         <button
                           type="submit"
                           className="bid-main-button eth-mode"
-                          disabled={isOnChainBidding || !lot.contractAddress}
+                          disabled={isOnChainBidding || !lot.contractAddress || minimumEthBid === null}
                         >
                           {isOnChainBidding ? "Confirming in MetaMask..." : lot.contractAddress ? "Place ETH Bid" : "ETH bidding unavailable"}
                         </button>
@@ -582,6 +638,7 @@ function LotDetailsPage() {
                           {b.amountEth != null
                             ? `${Number(b.amountEth).toFixed(4)} ETH`
                             : formatPrice(b.amount)}
+                          <span> ({formatPrice(b.amount)} equivalent)</span>
                           {b.txHash && (
                             <a
                               className="bid-tx-link"

@@ -163,17 +163,16 @@ public class LotsService
         var winningBid = await _repositoryWrapper.BidsRepository.GetHighestByLotIdAsync(id);
         if (winningBid is not null)
         {
-            var seller = await _repositoryWrapper.UsersRepository.GetForUpdateAsync(lot.SellerId)
-                ?? throw new KeyNotFoundException(
-                    $"Seller with ID {lot.SellerId} not found.");
-
-            if (seller.Balance > decimal.MaxValue - winningBid.Amount)
+            if (winningBid.Currency == BidCurrency.Usd)
             {
-                throw new InvalidOperationException(
-                    "Seller balance exceeds the supported range.");
+                var seller = await _repositoryWrapper.UsersRepository.GetForUpdateAsync(lot.SellerId)
+                    ?? throw new KeyNotFoundException($"Seller with ID {lot.SellerId} not found.");
+                if (seller.Balance > decimal.MaxValue - winningBid.Amount)
+                {
+                    throw new InvalidOperationException("Seller balance exceeds the supported range.");
+                }
+                seller.Balance += winningBid.Amount;
             }
-
-            seller.Balance += winningBid.Amount;
             lot.WinnerId = winningBid.UserId;
         }
 
@@ -208,15 +207,15 @@ public class LotsService
                 var winningBid = await _repositoryWrapper.BidsRepository.GetHighestByLotIdAsync(lot.Id);
                 if (winningBid is not null)
                 {
-                    var seller = await _repositoryWrapper.UsersRepository.GetForUpdateAsync(lot.SellerId);
-                    if (seller is not null)
+                    if (winningBid.Currency == BidCurrency.Usd)
                     {
-                        if (seller.Balance <= decimal.MaxValue - winningBid.Amount)
+                        var seller = await _repositoryWrapper.UsersRepository.GetForUpdateAsync(lot.SellerId);
+                        if (seller is not null && seller.Balance <= decimal.MaxValue - winningBid.Amount)
                         {
                             seller.Balance += winningBid.Amount;
                         }
-                        lot.WinnerId = winningBid.UserId;
                     }
+                    lot.WinnerId = winningBid.UserId;
                 }
 
                 lot.Status = LotStatus.Completed;

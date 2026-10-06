@@ -136,6 +136,17 @@ public class BidsService
             throw new InvalidOperationException("Insufficient balance for this bid.");
         }
 
+        if (!string.IsNullOrWhiteSpace(lot.ContractAddress))
+        {
+            if (_ethereumService is null)
+            {
+                throw new InvalidOperationException("Ethereum service is not configured.");
+            }
+
+            await _ethereumService.RecordFiatBidAsync(
+                lot.ContractAddress, lot.Id, dto.Amount + lot.MinBidStep);
+        }
+
         if (previousBid is not null && previousBid.UserId.HasValue && previousBid.UserId.Value != userId && previousBid.Currency == BidCurrency.Usd)
         {
             var previousBidder = lockedUsers[previousBid.UserId.Value];
@@ -150,6 +161,7 @@ public class BidsService
 
         bidder.Balance = availableBalance - dto.Amount;
         lot.CurrentPrice = dto.Amount;
+        lot.CurrentPriceEth = null;
         lot.WinnerId = userId;
 
         var bid = _mapper.Map<Bid>(dto);
@@ -214,6 +226,12 @@ public class BidsService
             throw new InvalidOperationException("This on-chain transaction has already been registered.");
         }
 
+        if (string.IsNullOrWhiteSpace(lot.ContractAddress) ||
+            !await _ethereumService.IsUnifiedAuctionAsync(lot.ContractAddress, lot.Id))
+        {
+            throw new InvalidOperationException("This lot does not have a compatible auction contract yet.");
+        }
+
         // Verify on-chain transaction on Ethereum node
         await _ethereumService.VerifyTransactionAsync(
             normalizedTxHash,
@@ -221,12 +239,54 @@ public class BidsService
             dto.AmountEth,
             normalizedWallet);
 
+        if (!await _ethereumService.IsCurrentEthLeaderAsync(
+                lot.ContractAddress, normalizedWallet, dto.AmountEth))
+        {
+            throw new InvalidOperationException(
+                "This ETH bid has already been outbid. Withdraw its refundable ETH from the contract.");
+        }
+
         var usdEquivalent = await _ethereumService.ConvertEthToUsdAsync(dto.AmountEth);
 
-        var user = await _repositoryWrapper.UsersRepository.GetForUpdateAsync(userId);
-        if (user is null)
+        if (usdEquivalent <= lot.CurrentPrice ||
+            usdEquivalent - lot.CurrentPrice < lot.MinBidStep)
         {
-            throw new KeyNotFoundException($"User with ID {userId} not found.");
+            throw new InvalidOperationException(
+                $"ETH bid must exceed the current USD price by at least {lot.MinBidStep}.");
+        }
+
+        var previousBid = await _repositoryWrapper.BidsRepository
+            .GetHighestByLotIdAsync(dto.LotId);
+
+        var userIdsToLock = new[] { userId, previousBid?.UserId }
+            .Where(id => id.HasValue)
+            .Select(id => id!.Value)
+            .Distinct()
+            .OrderBy(id => id)
+            .ToArray();
+
+        var lockedUsers = new Dictionary<int, User>();
+        foreach (var id in userIdsToLock)
+        {
+            var lockedUser = await _repositoryWrapper.UsersRepository.GetForUpdateAsync(id);
+            if (lockedUser is null)
+            {
+                throw new KeyNotFoundException($"User with ID {id} not found.");
+            }
+
+            lockedUsers[id] = lockedUser;
+        }
+
+        var user = lockedUsers[userId];
+        if (previousBid?.Currency == BidCurrency.Usd && previousBid.UserId.HasValue)
+        {
+            var previousBidder = lockedUsers[previousBid.UserId.Value];
+            if (previousBidder.Balance > decimal.MaxValue - previousBid.Amount)
+            {
+                throw new InvalidOperationException("Previous bidder balance exceeds the supported range.");
+            }
+
+            previousBidder.Balance += previousBid.Amount;
         }
 
         // Auto-link wallet address to user profile if not set yet
@@ -235,8 +295,9 @@ public class BidsService
             user.WalletAddress = normalizedWallet;
         }
 
-        // ETH is a separate demo auction; it does not change the USD price or winner.
+        lot.CurrentPrice = usdEquivalent;
         lot.CurrentPriceEth = dto.AmountEth;
+        lot.WinnerId = userId;
 
         var bid = new Bid
         {
@@ -251,8 +312,7 @@ public class BidsService
             PlacedAt = DateTime.UtcNow
         };
 
-        // Note: refunds for outbid ETH users are handled by the smart contract
-        // via pendingReturns[bidder] + withdraw(). No fiat balance changes needed.
+        // Earlier ETH bids are refunded by the contract via pendingReturns + withdraw().
 
         await _repositoryWrapper.BidsRepository.CreateAsync(bid);
         await _repositoryWrapper.SaveChangesAsync();

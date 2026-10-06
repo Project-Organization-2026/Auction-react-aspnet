@@ -105,7 +105,14 @@ public class BidsController : AuctionControllerBase
                 await _hubContext.Clients.Group($"lot-{dto.LotId}")
                     .SendAsync("ReceiveBid", bid);
 
-                // ETH demo bids have their own price and must not replace the USD catalogue price.
+                await _hubContext.Clients.All
+                    .SendAsync("LotUpdated", new
+                    {
+                        lotId = dto.LotId,
+                        currentPrice = bid.Amount,
+                        winnerId = userId,
+                        userName = bid.UserName ?? $"User #{userId}"
+                    });
             }
 
             return CreatedAtRoute("GetBidsByLotId", new { lotId = dto.LotId }, bid);

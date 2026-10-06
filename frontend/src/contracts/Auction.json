@@ -55,6 +55,11 @@
     },
     {
       "inputs": [],
+      "name": "OnlyOperator",
+      "type": "error"
+    },
+    {
+      "inputs": [],
       "name": "ReentrancyGuardReentrantCall",
       "type": "error"
     },
@@ -80,6 +85,19 @@
         }
       ],
       "name": "AuctionEnded",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "minimumBid",
+          "type": "uint256"
+        }
+      ],
+      "name": "FiatBidRecorded",
       "type": "event"
     },
     {
@@ -174,6 +192,32 @@
       "type": "function"
     },
     {
+      "inputs": [],
+      "name": "minimumBid",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "operator",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
       "inputs": [
         {
           "internalType": "address",
@@ -197,6 +241,19 @@
       "name": "placeBid",
       "outputs": [],
       "stateMutability": "payable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_minimumBid",
+          "type": "uint256"
+        }
+      ],
+      "name": "recordFiatBid",
+      "outputs": [],
+      "stateMutability": "nonpayable",
       "type": "function"
     },
     {

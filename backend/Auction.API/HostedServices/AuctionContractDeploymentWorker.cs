@@ -64,12 +64,31 @@ public sealed class AuctionContractDeploymentWorker(
             try
             {
                 if (!string.IsNullOrWhiteSpace(lot.ContractAddress) &&
-                    await ethereum.HasContractCodeAsync(lot.ContractAddress))
+                    await ethereum.IsUnifiedAuctionAsync(lot.ContractAddress, lot.Id))
                 {
+                    var requiredFloor = await ethereum.ConvertUsdToWeiAsync(lot.CurrentPrice + lot.MinBidStep);
+                    var onChainFloor = await ethereum.GetMinimumBidWeiAsync(lot.ContractAddress);
+                    if (onChainFloor < requiredFloor)
+                    {
+                        await ethereum.RecordFiatBidAsync(
+                            lot.ContractAddress, lot.Id, lot.CurrentPrice + lot.MinBidStep);
+                    }
                     continue;
                 }
 
-                var address = await ethereum.DeployAuctionAsync(lot.Id, lot.EndTime);
+                if (!string.IsNullOrWhiteSpace(lot.ContractAddress) &&
+                    await ethereum.HasContractCodeAsync(lot.ContractAddress) &&
+                    await database.Bids.AnyAsync(bid =>
+                        bid.LotId == lot.Id && bid.Currency == BidCurrency.Eth,
+                        cancellationToken))
+                {
+                    logger.LogWarning(
+                        "Lot {LotId} has ETH bids in an older contract. Automatic replacement is paused to preserve those funds.",
+                        lot.Id);
+                    continue;
+                }
+
+                var address = await ethereum.DeployAuctionAsync(lot.Id, lot.EndTime, lot.CurrentPrice + lot.MinBidStep);
                 lot.ContractAddress = address;
                 await database.SaveChangesAsync(cancellationToken);
                 logger.LogInformation("Deployed auction contract {ContractAddress} for lot {LotId}.",

@@ -114,6 +114,29 @@ public class BidsServiceTests
             Times.Once);
     }
 
+    [Fact]
+    public async Task CreateBid_OutbidsEthWithoutCreditingAnApplicationBalance()
+    {
+        var lot = CreateActiveLot(sellerId: 5);
+        lot.CurrentPrice = 300;
+        lot.WinnerId = 3;
+        var usdBidder = new User { Id = 2, Balance = 500 };
+        var ethBidder = new User { Id = 3, Balance = 20 };
+        _lots.Setup(item => item.GetForUpdateAsync(1)).ReturnsAsync(lot);
+        _bids.Setup(item => item.GetHighestByLotIdAsync(1))
+            .ReturnsAsync(new Bid { LotId = 1, UserId = 3, Currency = BidCurrency.Eth,
+                Amount = 300, AmountEth = 0.1m });
+        _users.Setup(item => item.GetForUpdateAsync(2)).ReturnsAsync(usdBidder);
+        _users.Setup(item => item.GetForUpdateAsync(3)).ReturnsAsync(ethBidder);
+
+        await _service.CreateBidAsync(new CreateBidDto { LotId = 1, Amount = 310 }, 2);
+
+        Assert.Equal(190, usdBidder.Balance);
+        Assert.Equal(20, ethBidder.Balance);
+        Assert.Equal(310, lot.CurrentPrice);
+        Assert.Equal(2, lot.WinnerId);
+    }
+
     private static Lot CreateActiveLot(int sellerId)
     {
         return new Lot

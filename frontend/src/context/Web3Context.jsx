@@ -138,9 +138,12 @@ export function Web3Provider({ children }) {
     }
 
     const value = ethers.parseEther(String(amountInEth));
-    const highestBid = await contract.highestBid();
-    const startingPrice = await contract.startingPrice();
-    const minimum = highestBid > 0n ? highestBid : startingPrice;
+    let minimum;
+    try {
+      minimum = await contract.minimumBid();
+    } catch {
+      throw new Error("This lot uses an older auction contract. ETH bidding is unavailable until it is updated.");
+    }
     if (value <= minimum) {
       throw new Error(`ETH bid must be greater than ${ethers.formatEther(minimum)} ETH.`);
     }
@@ -153,6 +156,32 @@ export function Web3Provider({ children }) {
     }
 
     return { txHash: tx.hash, receipt };
+  };
+
+  const getPendingReturn = useCallback(async (contractAddress, walletAddress) => {
+    if (!contractAddress || !walletAddress || !ethers.isAddress(contractAddress)) return 0n;
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    if (await provider.getCode(contractAddress) === "0x") return 0n;
+    const contract = new ethers.Contract(contractAddress, auctionContractArtifact.abi, provider);
+    return contract.pendingReturns(walletAddress);
+  }, []);
+
+  const getMinimumBid = useCallback(async (contractAddress) => {
+    if (!contractAddress || !ethers.isAddress(contractAddress)) return null;
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    if (await provider.getCode(contractAddress) === "0x") return null;
+    const contract = new ethers.Contract(contractAddress, auctionContractArtifact.abi, provider);
+    return contract.minimumBid();
+  }, []);
+
+  const withdrawOutbidBid = async (contractAddress) => {
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const contract = new ethers.Contract(
+      contractAddress, auctionContractArtifact.abi, await provider.getSigner());
+    const tx = await contract.withdraw();
+    await tx.wait();
+    if (account) await updateAccountData(account);
+    return tx.hash;
   };
 
   const switchToGanache = async () => {
@@ -201,6 +230,9 @@ export function Web3Provider({ children }) {
     disconnectWallet,
     switchToGanache,
     placeOnChainBid,
+    getPendingReturn,
+    getMinimumBid,
+    withdrawOutbidBid,
   };
 
   return <Web3Context.Provider value={value}>{children}</Web3Context.Provider>;

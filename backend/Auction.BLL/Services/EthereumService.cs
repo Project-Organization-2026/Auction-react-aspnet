@@ -10,6 +10,7 @@ public class EthereumService
 {
     private readonly HttpClient _httpClient;
     private readonly string _rpcUrl;
+    private readonly bool _fixedRateEnabled;
 
     // CoinGecko free-tier rate cache
     private decimal _cachedEthToUsdRate = 3000m;
@@ -21,6 +22,8 @@ public class EthereumService
     {
         _httpClient = httpClient;
         _rpcUrl = Environment.GetEnvironmentVariable("ETHEREUM_RPC_URL") ?? "http://127.0.0.1:7545";
+        _fixedRateEnabled = !bool.TryParse(
+            Environment.GetEnvironmentVariable("ETH_USD_RATE_FIXED"), out var fixedRate) || fixedRate;
 
         // Seed cache from env fallback so first conversion is never 0
         if (decimal.TryParse(
@@ -39,6 +42,11 @@ public class EthereumService
     /// </summary>
     public async Task<decimal> GetEthToUsdRateAsync()
     {
+        if (_fixedRateEnabled)
+        {
+            return _cachedEthToUsdRate;
+        }
+
         if (DateTime.UtcNow < _cacheExpiresAt)
         {
             return _cachedEthToUsdRate;
@@ -77,6 +85,7 @@ public class EthereumService
 
     public async Task<decimal> ConvertEthToUsdAsync(decimal amountEth)
     {
+        RequireFixedRate();
         var rate = await GetEthToUsdRateAsync();
         return Math.Round(amountEth * rate, 2);
     }
@@ -110,13 +119,59 @@ public class EthereumService
                result.Result.GetString() != "0x";
     }
 
-    /// <summary>Deploys a dedicated Auction contract for one active demo lot.</summary>
-    public async Task<string> DeployAuctionAsync(int lotId, DateTime endTime, string? artifactPath = null)
+    public async Task<bool> IsUnifiedAuctionAsync(string address, int lotId)
     {
-        if (lotId <= 0 || endTime <= DateTime.UtcNow)
+        if (!await HasContractCodeAsync(address)) return false;
+        var minimumBid = await ReadContractUint256Async(address, "0xd3a86386");
+        var onChainLotId = await ReadContractUint256Async(address, "0xadc1e206");
+        return minimumBid.HasValue && onChainLotId == lotId;
+    }
+
+    public Task<BigInteger?> GetMinimumBidWeiAsync(string address) =>
+        ReadContractUint256Async(address, "0xd3a86386");
+
+    public async Task<bool> IsCurrentEthLeaderAsync(string address, string wallet, decimal amountEth)
+    {
+        var bidder = await ReadContractUint256Async(address, "0x91f90157");
+        var amount = await ReadContractUint256Async(address, "0xd57bde79");
+        var walletNumber = BigInteger.Parse("0" + wallet[2..], NumberStyles.HexNumber,
+            CultureInfo.InvariantCulture);
+        var expectedWei = (BigInteger)(amountEth * 1_000_000_000_000_000_000m);
+        return bidder == walletNumber && amount == expectedWei;
+    }
+
+    private async Task<BigInteger?> ReadContractUint256Async(string address, string data)
+    {
+        var response = await _httpClient.PostAsJsonAsync(
+            _rpcUrl,
+            new RpcRequest("eth_call", [new { to = address, data }, "latest"], 7));
+        response.EnsureSuccessStatusCode();
+        var result = await response.Content.ReadFromJsonAsync<RpcResponse<JsonElement>>();
+        if (result?.Error is { ValueKind: JsonValueKind.Object })
+        {
+            // Older contracts do not implement the unified-auction getter.
+            return null;
+        }
+
+        var value = result?.Result.ValueKind == JsonValueKind.String
+            ? result.Result.GetString()
+            : null;
+        if (string.IsNullOrWhiteSpace(value) || value == "0x") return null;
+        return BigInteger.TryParse("0" + value[2..], NumberStyles.HexNumber,
+            CultureInfo.InvariantCulture, out var number)
+            ? number
+            : null;
+    }
+
+    /// <summary>Deploys a dedicated Auction contract for one active demo lot.</summary>
+    public async Task<string> DeployAuctionAsync(int lotId, DateTime endTime, decimal startingPriceUsd, string? artifactPath = null)
+    {
+        if (lotId <= 0 || endTime <= DateTime.UtcNow || startingPriceUsd <= 0)
         {
             throw new InvalidOperationException("Only active, unexpired lots can receive an auction contract.");
         }
+
+        RequireFixedRate();
 
         artifactPath ??= Environment.GetEnvironmentVariable("ETHEREUM_CONTRACT_ARTIFACT_PATH")
             ?? Path.Combine(AppContext.BaseDirectory, "contracts", "Auction.json");
@@ -127,18 +182,40 @@ public class EthereumService
             throw new InvalidOperationException("Auction contract bytecode is missing from the build artifact.");
         }
 
-        var startingBidText = Environment.GetEnvironmentVariable("ETHEREUM_STARTING_BID_ETH");
-        var startingBidEth = decimal.TryParse(startingBidText, NumberStyles.Number,
-            CultureInfo.InvariantCulture, out var configuredBid) && configuredBid > 0
-            ? configuredBid
-            : 0.01m;
-        var startingWei = (BigInteger)(startingBidEth * 1_000_000_000_000_000_000m);
+        var startingWei = await ConvertUsdToWeiAsync(startingPriceUsd);
         var durationSeconds = Math.Max(1L, (long)Math.Ceiling((endTime - DateTime.UtcNow).TotalSeconds));
         var deploymentData = bytecode +
             ToUint256Hex(lotId) +
             ToUint256Hex(startingWei) +
             ToUint256Hex(durationSeconds);
 
+        var receipt = await SendOperatorTransactionAsync(null, deploymentData);
+        var address = receipt.TryGetProperty("contractAddress", out var addressValue)
+            ? addressValue.GetString()
+            : null;
+        if (string.IsNullOrWhiteSpace(address) || !await HasContractCodeAsync(address))
+        {
+            throw new InvalidOperationException("Auction contract deployment failed on Ganache.");
+        }
+
+        return address;
+    }
+
+    public async Task RecordFiatBidAsync(string contractAddress, int lotId, decimal newPriceUsd)
+    {
+        RequireFixedRate();
+        if (!await IsUnifiedAuctionAsync(contractAddress, lotId))
+        {
+            throw new InvalidOperationException("This lot needs a compatible auction contract before USD bidding can continue.");
+        }
+        var minimumWei = await ConvertUsdToWeiAsync(newPriceUsd);
+        await SendOperatorTransactionAsync(
+            contractAddress,
+            "0x248a353f" + ToUint256Hex(minimumWei));
+    }
+
+    private async Task<JsonElement> SendOperatorTransactionAsync(string? to, string data)
+    {
         var accountsResponse = await _httpClient.PostAsJsonAsync(
             _rpcUrl,
             new RpcRequest("eth_accounts", [], 4));
@@ -158,9 +235,12 @@ public class EthereumService
             throw new InvalidOperationException("Configured contract deployer is not unlocked on Ganache.");
         }
 
+        object transaction = to is null
+            ? new { from = deployer, data }
+            : new { from = deployer, to, data };
         var sendResponse = await _httpClient.PostAsJsonAsync(
             _rpcUrl,
-            new RpcRequest("eth_sendTransaction", [new { from = deployer, data = deploymentData }], 5));
+            new RpcRequest("eth_sendTransaction", [transaction], 5));
         sendResponse.EnsureSuccessStatusCode();
         var sent = await sendResponse.Content.ReadFromJsonAsync<RpcResponse<JsonElement>>();
         var txHash = sent?.Result.ValueKind == JsonValueKind.String
@@ -168,7 +248,7 @@ public class EthereumService
             : null;
         if (string.IsNullOrWhiteSpace(txHash))
         {
-            throw new InvalidOperationException("Ethereum node did not return a contract deployment transaction hash.");
+            throw new InvalidOperationException("Ethereum node did not return a transaction hash.");
         }
 
         for (var attempt = 0; attempt < 30; attempt++)
@@ -181,20 +261,18 @@ public class EthereumService
             if (receipt?.Result.ValueKind == JsonValueKind.Object)
             {
                 var status = receipt.Result.GetProperty("status").GetString();
-                var address = receipt.Result.GetProperty("contractAddress").GetString();
-                if (status is not ("0x1" or "0x01") || string.IsNullOrWhiteSpace(address) ||
-                    !await HasContractCodeAsync(address))
+                if (status is not ("0x1" or "0x01"))
                 {
-                    throw new InvalidOperationException("Auction contract deployment failed on Ganache.");
+                    throw new InvalidOperationException("Auction contract transaction reverted on Ganache.");
                 }
 
-                return address;
+                return receipt.Result;
             }
 
             await Task.Delay(TimeSpan.FromSeconds(1));
         }
 
-        throw new InvalidOperationException("Timed out waiting for the auction contract deployment receipt.");
+        throw new InvalidOperationException("Timed out waiting for the auction contract transaction receipt.");
     }
 
     /// <summary>
@@ -301,6 +379,31 @@ public class EthereumService
     {
         if (value < 0) throw new ArgumentOutOfRangeException(nameof(value));
         return value.ToString("x", CultureInfo.InvariantCulture).PadLeft(64, '0');
+    }
+
+    private void RequireFixedRate()
+    {
+        if (!_fixedRateEnabled)
+        {
+            throw new InvalidOperationException(
+                "Combined USD/ETH auctions require ETH_USD_RATE_FIXED=true and a fixed ETH_USD_RATE.");
+        }
+    }
+
+    public async Task<BigInteger> ConvertUsdToWeiAsync(decimal amountUsd)
+    {
+        RequireFixedRate();
+        var rate = await GetEthToUsdRateAsync();
+        if (rate <= 0 || amountUsd <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(amountUsd));
+        }
+
+        var eth = amountUsd / rate;
+        var wholeEth = new BigInteger(decimal.Truncate(eth));
+        var fractionalWei = (BigInteger)decimal.Ceiling(
+            (eth - decimal.Truncate(eth)) * 1_000_000_000_000_000_000m);
+        return wholeEth * BigInteger.Pow(10, 18) + fractionalWei;
     }
 
     private sealed record RpcRequest(

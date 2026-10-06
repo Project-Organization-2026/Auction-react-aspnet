@@ -8,6 +8,9 @@ contract Auction is ReentrancyGuard {
     address payable public immutable seller;
     uint256 public immutable startingPrice;
     uint256 public immutable auctionEndTime;
+    address public immutable operator;
+
+    uint256 public minimumBid;
 
     address public highestBidder;
     uint256 public highestBid;
@@ -17,6 +20,7 @@ contract Auction is ReentrancyGuard {
     bool public ended;
 
     event HighestBidIncreased(address indexed bidder, uint256 amount);
+    event FiatBidRecorded(uint256 minimumBid);
     event AuctionEnded(address winner, uint256 amount);
 
     error AuctionAlreadyEnded();
@@ -25,6 +29,7 @@ contract Auction is ReentrancyGuard {
     error AuctionEndAlreadyCalled();
     error TransferFailed();
     error NoPendingReturns();
+    error OnlyOperator();
 
     constructor(
         uint256 _lotId,
@@ -33,7 +38,9 @@ contract Auction is ReentrancyGuard {
     ) {
         lotId = _lotId;
         seller = payable(msg.sender);
+        operator = msg.sender;
         startingPrice = _startingPrice;
+        minimumBid = _startingPrice;
         auctionEndTime = block.timestamp + _durationInSeconds;
     }
 
@@ -42,7 +49,6 @@ contract Auction is ReentrancyGuard {
             revert AuctionAlreadyEnded();
         }
 
-        uint256 minimumBid = highestBid == 0 ? startingPrice : highestBid;
         if (msg.value <= minimumBid) {
             revert BidNotHighEnough(minimumBid);
         }
@@ -53,8 +59,26 @@ contract Auction is ReentrancyGuard {
 
         highestBidder = msg.sender;
         highestBid = msg.value;
+        minimumBid = msg.value;
 
         emit HighestBidIncreased(msg.sender, msg.value);
+    }
+
+    // The application records a USD bid only after raising the on-chain ETH floor.
+    // Any ETH bid it outbids becomes available through withdraw().
+    function recordFiatBid(uint256 _minimumBid) external {
+        if (msg.sender != operator) revert OnlyOperator();
+        if (block.timestamp >= auctionEndTime) revert AuctionAlreadyEnded();
+        if (_minimumBid <= minimumBid) revert BidNotHighEnough(minimumBid);
+
+        if (highestBidder != address(0)) {
+            pendingReturns[highestBidder] += highestBid;
+            highestBidder = address(0);
+            highestBid = 0;
+        }
+
+        minimumBid = _minimumBid;
+        emit FiatBidRecorded(_minimumBid);
     }
 
     function withdraw() external nonReentrant returns (bool) {

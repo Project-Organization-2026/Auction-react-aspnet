@@ -1,6 +1,5 @@
 using Auction.DAL.Data;
 using Auction.DAL.Entities;
-using Auction.DAL.Enums;
 using Auction.DAL.Repositories.Interfaces.Bids;
 using Auction.DAL.Repositories.Realizations.Base;
 using Microsoft.EntityFrameworkCore;
@@ -20,7 +19,7 @@ public class BidsRepository : RepositoryBase<Bid>, IBidsRepository
     {
         return _context.Bids
             .AsNoTracking()
-            .Where(bid => bid.LotId == lotId && bid.Currency == BidCurrency.Usd)
+            .Where(bid => bid.LotId == lotId)
             .OrderByDescending(bid => bid.Amount)
             .ThenByDescending(bid => bid.Id)
             .FirstOrDefaultAsync();

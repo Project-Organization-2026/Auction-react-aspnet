@@ -48,6 +48,10 @@ public class EthereumServiceTests
     [Fact]
     public async Task DeployAuctionUsesUnlockedGanacheAccountAndChecksDeployedCode()
     {
+        var previousFixed = Environment.GetEnvironmentVariable("ETH_USD_RATE_FIXED");
+        var previousRate = Environment.GetEnvironmentVariable("ETH_USD_RATE");
+        Environment.SetEnvironmentVariable("ETH_USD_RATE_FIXED", "true");
+        Environment.SetEnvironmentVariable("ETH_USD_RATE", "3000");
         var artifactPath = Path.GetTempFileName();
         await File.WriteAllTextAsync(artifactPath, "{\"bytecode\":\"0x6000\"}");
         var methods = new List<string>();
@@ -75,7 +79,7 @@ public class EthereumServiceTests
             }));
             var service = new EthereumService(client);
 
-            var address = await service.DeployAuctionAsync(2, DateTime.UtcNow.AddMinutes(10), artifactPath);
+            var address = await service.DeployAuctionAsync(2, DateTime.UtcNow.AddMinutes(10), 120m, artifactPath);
 
             Assert.Equal(ContractAddress, address);
             Assert.Equal(["eth_accounts", "eth_sendTransaction", "eth_getTransactionReceipt", "eth_getCode"], methods);
@@ -83,6 +87,8 @@ public class EthereumServiceTests
         finally
         {
             File.Delete(artifactPath);
+            Environment.SetEnvironmentVariable("ETH_USD_RATE_FIXED", previousFixed);
+            Environment.SetEnvironmentVariable("ETH_USD_RATE", previousRate);
         }
     }
 
