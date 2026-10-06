@@ -130,6 +130,17 @@ public class EthereumService
     public Task<BigInteger?> GetMinimumBidWeiAsync(string address) =>
         ReadContractUint256Async(address, "0xd3a86386");
 
+    public async Task<bool> HasCurrentEthLeaderAsync(string address)
+    {
+        var bidder = await ReadContractUint256Async(address, "0x91f90157");
+        if (!bidder.HasValue)
+        {
+            throw new InvalidOperationException("Cannot verify the current ETH leader on the auction contract.");
+        }
+
+        return bidder.Value != BigInteger.Zero;
+    }
+
     public async Task<bool> IsCurrentEthLeaderAsync(string address, string wallet, decimal amountEth)
     {
         var bidder = await ReadContractUint256Async(address, "0x91f90157");

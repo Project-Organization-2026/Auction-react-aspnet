@@ -11,6 +11,35 @@ public class EthereumServiceTests
     private const string ContractAddress = "0x1545810FD6B1f940C3D955aa2E87BB5744C51002";
     private const string WalletAddress = "0x3688200000000000000000000000000000001ebf";
 
+    [Theory]
+    [InlineData("0x0000000000000000000000000000000000000000000000000000000000000000", false)]
+    [InlineData("0x0000000000000000000000003688200000000000000000000000000000001ebf", true)]
+    public async Task DetectsLiveEthLeaderBeforeFiatFloorReconciliation(string bidder, bool expected)
+    {
+        using var client = new HttpClient(new RpcHandler(method => method switch
+        {
+            "eth_call" => JsonSerializer.Serialize(new { jsonrpc = "2.0", result = bidder }),
+            _ => throw new Exception($"Unexpected RPC call: {method}")
+        }));
+        var service = new EthereumService(client);
+
+        Assert.Equal(expected, await service.HasCurrentEthLeaderAsync(ContractAddress));
+    }
+
+    [Fact]
+    public async Task MissingLeaderResponseDoesNotPermitFiatFloorReconciliation()
+    {
+        using var client = new HttpClient(new RpcHandler(method => method switch
+        {
+            "eth_call" => "{\"jsonrpc\":\"2.0\",\"result\":\"0x\"}",
+            _ => throw new Exception($"Unexpected RPC call: {method}")
+        }));
+        var service = new EthereumService(client);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.HasCurrentEthLeaderAsync(ContractAddress));
+    }
+
     [Fact]
     public async Task VerifyTransactionRejectsLotWithoutContractAddress()
     {

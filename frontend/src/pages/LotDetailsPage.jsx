@@ -94,6 +94,9 @@ function LotDetailsPage() {
           ...prev,
           currentPrice: newBid.amount,
           currentPriceEth: newBid.currency === 1 ? newBid.amountEth : null,
+          minimumBidEth: prev.ethUsdRate
+            ? Number(((Number(newBid.amount) + Number(prev.minBidStep)) / Number(prev.ethUsdRate)).toFixed(8))
+            : prev.minimumBidEth,
           winnerId: newBid.userId,
           winner: {
             id: newBid.userId,
@@ -135,13 +138,17 @@ function LotDetailsPage() {
     getMinimumBid(lot.contractAddress)
       .then((minimum) => {
         if (!active || minimum === null) return;
-        setMinimumEthBid(minimum);
-        const suggestion = Math.ceil((Number(ethers.formatEther(minimum)) + 0.0001) * 10000) / 10000;
+        const backendMinimum = lot.minimumBidEth != null
+          ? ethers.parseEther(String(lot.minimumBidEth))
+          : 0n;
+        const effectiveMinimum = minimum > backendMinimum ? minimum : backendMinimum;
+        setMinimumEthBid(effectiveMinimum);
+        const suggestion = Math.ceil((Number(ethers.formatEther(effectiveMinimum)) + 0.0001) * 10000) / 10000;
         setEthBidAmount(suggestion.toFixed(4));
       })
       .catch(() => { if (active) setMinimumEthBid(null); });
     return () => { active = false; };
-  }, [lot?.contractAddress, web3Account, bids, getMinimumBid]);
+  }, [lot?.contractAddress, lot?.minimumBidEth, web3Account, bids, getMinimumBid]);
 
   const handleWithdraw = async () => {
     setIsWithdrawing(true);
@@ -241,6 +248,11 @@ function LotDetailsPage() {
     const val = parseFloat(ethBidAmount);
     if (!val || val <= 0) {
       setError("Please enter a valid ETH amount (e.g. 0.05).");
+      return;
+    }
+
+    if (minimumEthBid !== null && ethers.parseEther(String(val)) <= minimumEthBid) {
+      setError(`ETH bid must exceed ${ethers.formatEther(minimumEthBid)} ETH.`);
       return;
     }
 

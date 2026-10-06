@@ -13,11 +13,13 @@ public class LotsService
 {
     private readonly IRepositoryWrapper _repositoryWrapper;
     private readonly IMapper _mapper;
+    private readonly EthereumService? _ethereumService;
 
-    public LotsService(IRepositoryWrapper repositoryWrapper, IMapper mapper)
+    public LotsService(IRepositoryWrapper repositoryWrapper, IMapper mapper, EthereumService? ethereumService = null)
     {
         _repositoryWrapper = repositoryWrapper;
         _mapper = mapper;
+        _ethereumService = ethereumService;
     }
 
     public async Task<PagedResultDto<LotDto>> GetAllAsync(
@@ -54,7 +56,16 @@ public class LotsService
             throw new KeyNotFoundException($"Lot with ID {id} not found.");
         }
 
-        return _mapper.Map<LotDto>(lot);
+        var result = _mapper.Map<LotDto>(lot);
+        if (_ethereumService is not null && lot.Status == LotStatus.Active)
+        {
+            var rate = await _ethereumService.GetEthToUsdRateAsync();
+            result.EthUsdRate = rate;
+            result.MinimumBidEth = Math.Round(
+                (lot.CurrentPrice + lot.MinBidStep) / rate, 8);
+        }
+
+        return result;
     }
 
     public async Task<LotDto> CreateLotAsync(CreateLotDto dto, int sellerId)

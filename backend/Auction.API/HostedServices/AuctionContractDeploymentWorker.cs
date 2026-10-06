@@ -66,12 +66,18 @@ public sealed class AuctionContractDeploymentWorker(
                 if (!string.IsNullOrWhiteSpace(lot.ContractAddress) &&
                     await ethereum.IsUnifiedAuctionAsync(lot.ContractAddress, lot.Id))
                 {
-                    var requiredFloor = await ethereum.ConvertUsdToWeiAsync(lot.CurrentPrice + lot.MinBidStep);
-                    var onChainFloor = await ethereum.GetMinimumBidWeiAsync(lot.ContractAddress);
-                    if (onChainFloor < requiredFloor)
+                    // The database can still show a USD leader while an ETH transaction
+                    // is being registered. Never refund a live on-chain leader.
+                    if (lot.CurrentPriceEth is null &&
+                        !await ethereum.HasCurrentEthLeaderAsync(lot.ContractAddress))
                     {
-                        await ethereum.RecordFiatBidAsync(
-                            lot.ContractAddress, lot.Id, lot.CurrentPrice + lot.MinBidStep);
+                        var requiredFloor = await ethereum.ConvertUsdToWeiAsync(lot.CurrentPrice + lot.MinBidStep);
+                        var onChainFloor = await ethereum.GetMinimumBidWeiAsync(lot.ContractAddress);
+                        if (onChainFloor < requiredFloor)
+                        {
+                            await ethereum.RecordFiatBidAsync(
+                                lot.ContractAddress, lot.Id, lot.CurrentPrice + lot.MinBidStep);
+                        }
                     }
                     continue;
                 }
